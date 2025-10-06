@@ -10,10 +10,10 @@
 
 <p align="center">
 
-  <img alt="Stars" src="https://img.shields.io/github/stars/Momin-786/stocklens?style=social">
+  <img alt="Stars" src="https://img.shields.io/github/stars/Momin-786/stocklens-ai-vision-main?style=social">
   
-  <a href="https://github.com/Momin-786/stocklens">
-    <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Momin-786/stocklens">
+  <a href="https://github.com/Momin-786/stocklens-ai-vision-main">
+    <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Momin-786/stocklens-ai-vision-main">
   </a>
     
   <img alt="License" src="https://img.shields.io/badge/license-MIT-brightgreen">
