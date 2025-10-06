@@ -132,8 +132,6 @@ $ npm start
  <br />
  <p><b>Abdul Momin</b></p></a>
 
-[![Linkedin Badge](https://img.shields.io/badge/-Your%20Name-blue?style=flat-square\&logo=Linkedin\&logoColor=white\&link=https://www.linkedin.com/in/yourprofile/)](https://www.linkedin.com/in/yourprofile/)
-
 **Team Member:**
 👨‍💻 **Mutyyab** – Developer & Analyst
 
@@ -156,8 +154,6 @@ Built with **React** and designed with a focus on **HCI principles** for usabili
 
 This project was created with [Create React App](https://github.com/facebook/create-react-app).
 To learn React, visit the [React documentation](https://reactjs.org/).
-
----
 
 
 ```
