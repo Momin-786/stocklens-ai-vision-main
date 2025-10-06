@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Nord-inspired HCI-optimized colors */
+    --background: 216 20% 95%;
+    --foreground: 220 16% 22%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 220 16% 22%;
+
+    --popover: 0 0% 98%;
+    --popover-foreground: 220 16% 22%;
+
+    --primary: 220 16% 22%;
+    --primary-foreground: 218 27% 92%;
+
+    --secondary: 193 43% 67%;
+    --secondary-foreground: 220 16% 22%;
+
+    --muted: 220 16% 96%;
+    --muted-foreground: 220 16% 46%;
+
+    --accent: 193 43% 67%;
+    --accent-foreground: 220 16% 22%;
+
+    --success: 92 28% 65%;
+    --success-foreground: 220 16% 22%;
+
+    --destructive: 354 50% 57%;
+    --destructive-foreground: 218 27% 92%;
+
+    --border: 220 13% 87%;
+    --input: 220 13% 87%;
+    --ring: 193 43% 67%;
+
+    --radius: 0.75rem;
+
+    --chart-1: 193 43% 67%;
+    --chart-2: 92 28% 65%;
+    --chart-3: 354 50% 57%;
+    --chart-4: 311 20% 63%;
+    --chart-5: 213 32% 52%;
+  }
+
+  .dark {
+    --background: 220 16% 22%;
+    --foreground: 218 27% 92%;
+
+    --card: 220 16% 26%;
+    --card-foreground: 218 27% 92%;
+
+    --popover: 220 16% 26%;
+    --popover-foreground: 218 27% 92%;
+
+    --primary: 218 27% 92%;
+    --primary-foreground: 220 16% 22%;
+
+    --secondary: 193 43% 67%;
+    --secondary-foreground: 220 16% 22%;
+
+    --muted: 220 16% 30%;
+    --muted-foreground: 218 20% 65%;
+
+    --accent: 193 43% 67%;
+    --accent-foreground: 220 16% 22%;
+
+    --success: 92 28% 65%;
+    --success-foreground: 220 16% 22%;
+
+    --destructive: 354 50% 57%;
+    --destructive-foreground: 218 27% 92%;
+
+    --border: 220 16% 30%;
+    --input: 220 16% 30%;
+    --ring: 193 43% 67%;
+
+    --chart-1: 193 43% 67%;
+    --chart-2: 92 28% 65%;
+    --chart-3: 354 50% 57%;
+    --chart-4: 311 20% 63%;
+    --chart-5: 213 32% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@layer utilities {
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent;
+  }
+}
