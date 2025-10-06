@@ -94,7 +94,7 @@ $ npm start
 
 ## 💻 Tech Stack
 
-**Platform:** [React.js](https://reactjs.org/) + [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+**Platform:** [React.js](https://reactjs.org/) + [TypeScript]()
 
 #### **Libraries & Tools**
 
