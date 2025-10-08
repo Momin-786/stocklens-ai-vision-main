@@ -4,6 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,6 +33,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export default function Portfolio() {
+  const [showGreeting, setShowGreeting] = useState(true);
+  const userName = "Momin";
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  };
+
   const [holdings, setHoldings] = useState([
     {
       id: 1,
@@ -75,6 +92,39 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-background py-12">
+      {/* Greeting Dialog */}
+      <Dialog open={showGreeting} onOpenChange={setShowGreeting}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent">
+              {getGreeting()}, {userName}!
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Here's your portfolio update
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/5 border border-secondary/20">
+              <div>
+                <p className="text-sm text-muted-foreground">Portfolio Value</p>
+                <p className="text-2xl font-bold">${totalValue.toLocaleString()}</p>
+              </div>
+              <Wallet className="h-8 w-8 text-secondary" />
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-lg bg-accent/5 border border-accent/20">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Gain</p>
+                <p className="text-2xl font-bold text-accent">+${totalGain.toFixed(2)}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-accent" />
+            </div>
+          </div>
+          <Button onClick={() => setShowGreeting(false)} className="w-full">
+            View Full Portfolio
+          </Button>
+        </DialogContent>
+      </Dialog>
+
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
