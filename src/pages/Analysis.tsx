@@ -14,9 +14,28 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { generateStockReport } from "@/utils/pdfGenerator";
+import { toast } from "sonner";
+import { usePracticeMode } from "@/contexts/PracticeModeContext";
 
 export default function Analysis() {
   const [timeRange, setTimeRange] = useState("1M");
+  const { isPracticeMode } = usePracticeMode();
+
+  const handleDownloadReport = () => {
+    generateStockReport({
+      symbol: stock.symbol,
+      name: stock.name,
+      price: stock.price,
+      change: stock.change,
+      changePercent: stock.changePercent,
+      prediction: aiInsights.signal,
+      confidence: aiInsights.confidence,
+      reasoning: aiInsights.reasoning,
+      keyFactors: aiInsights.keyFactors
+    });
+    toast.success("Report downloaded successfully!");
+  };
 
   const stock = {
     symbol: "AAPL",
@@ -82,7 +101,12 @@ export default function Analysis() {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            {isPracticeMode && (
+              <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
+                Practice Mode
+              </Badge>
+            )}
+            <Button variant="outline" size="sm" onClick={handleDownloadReport}>
               <Download className="h-4 w-4 mr-2" />
               Download Report
             </Button>
@@ -332,3 +356,4 @@ export default function Analysis() {
     </div>
   );
 }
+ 

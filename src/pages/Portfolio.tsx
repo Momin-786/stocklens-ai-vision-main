@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,12 +29,44 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  Download,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { PortfolioComparison } from "@/components/PortfolioComparison";
+import { useNotifications } from "@/hooks/useNotifications";
+import { usePracticeMode } from "@/contexts/PracticeModeContext";
+import { generatePortfolioReport } from "@/utils/pdfGenerator";
+import { toast } from "sonner";
 
 export default function Portfolio() {
   const [showGreeting, setShowGreeting] = useState(true);
+  const [activeTab, setActiveTab] = useState("holdings");
   const userName = "Momin";
+  const { isPracticeMode } = usePracticeMode();
+  
+  useNotifications({ enabled: true, interval: 30000 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowGreeting(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleDownloadReport = () => {
+    generatePortfolioReport({
+      totalValue,
+      totalGain,
+      gainPercent: Number(totalGainPercent),
+      holdings: holdings.map(h => ({
+        symbol: h.symbol,
+        shares: h.shares,
+        avgPrice: h.avgPrice,
+        currentPrice: h.currentPrice,
+        value: h.value,
+        gain: h.gain
+      }))
+    });
+    toast.success("Portfolio report downloaded!");
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -128,12 +160,23 @@ export default function Portfolio() {
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-4xl font-heading font-bold mb-2">
-            Portfolio Management
-          </h1>
-          <p className="text-muted-foreground">
-            Track your investments and watchlist
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-heading font-bold mb-2">My Portfolio</h1>
+              <p className="text-muted-foreground">Track your investments and performance</p>
+            </div>
+            <div className="flex gap-2">
+              {isPracticeMode && (
+                <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
+                  Practice Mode
+                </Badge>
+              )}
+              <Button onClick={handleDownloadReport} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download Report
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Overview Cards */}
@@ -202,11 +245,12 @@ export default function Portfolio() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="holdings" className="animate-slide-up">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-slide-up">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="holdings">Holdings</TabsTrigger>
             <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            <TabsTrigger value="comparison">Compare</TabsTrigger>
           </TabsList>
 
           {/* Holdings Tab */}
@@ -446,6 +490,11 @@ export default function Portfolio() {
                 ))}
               </div>
             </Card>
+          </TabsContent>
+
+          {/* Comparison Tab */}
+          <TabsContent value="comparison">
+            <PortfolioComparison />
           </TabsContent>
         </Tabs>
       </div>

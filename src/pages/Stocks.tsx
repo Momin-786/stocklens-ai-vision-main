@@ -13,16 +13,19 @@ import {
   Filter,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+import { usePracticeMode } from "@/contexts/PracticeModeContext";
 
 export default function Stocks() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
   const [riskLevel, setRiskLevel] = useState([50]);
+  const { isPracticeMode } = usePracticeMode();
 
   const categories = ["All", "Tech", "Finance", "Energy", "Healthcare", "Consumer"];
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const stocks = [
+  const initialStocks = [
     {
       id: "AAPL",
       name: "Apple Inc.",
@@ -105,6 +108,9 @@ export default function Stocks() {
     },
   ];
 
+  // Use real-time updates hook
+  const { data: stocks, lastUpdate } = useRealtimeUpdates(initialStocks, !isPracticeMode);
+
   const toggleStock = (id: string) => {
     setSelectedStocks((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
@@ -121,12 +127,28 @@ export default function Stocks() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-4xl font-heading font-bold mb-2">
-            Stock Selection
-          </h1>
-          <p className="text-muted-foreground">
-            Choose stocks to analyze and get AI-powered insights
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-heading font-bold mb-2">
+                Stock Selection
+              </h1>
+              <p className="text-muted-foreground">
+                Choose stocks to analyze and get AI-powered insights
+              </p>
+            </div>
+            <div className="flex gap-2 items-center">
+              {!isPracticeMode && (
+                <Badge variant="outline" className="bg-success/10 text-success border-success">
+                  Live Updates
+                </Badge>
+              )}
+              {isPracticeMode && (
+                <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
+                  Practice Mode
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

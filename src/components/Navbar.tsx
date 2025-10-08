@@ -1,11 +1,14 @@
-import { Moon, Sun, TrendingUp } from "lucide-react";
+import { Moon, Sun, TrendingUp, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { usePracticeMode } from "@/contexts/PracticeModeContext";
+import { Badge } from "@/components/ui/badge";
 
 export const Navbar = () => {
   const location = useLocation();
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { isPracticeMode, togglePracticeMode } = usePracticeMode();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -84,6 +87,15 @@ export const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            variant={isPracticeMode ? "default" : "outline"}
+            size="sm"
+            onClick={togglePracticeMode}
+            className={`hidden md:inline-flex gap-2 ${isPracticeMode ? "bg-accent hover:bg-accent/90" : ""}`}
+          >
+            <FlaskConical className="h-4 w-4" />
+            {isPracticeMode && <Badge variant="secondary" className="px-1 py-0 text-xs">Practice</Badge>}
+          </Button>
           <Button
             variant="ghost"
             size="icon"

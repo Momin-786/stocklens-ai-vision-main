@@ -13,6 +13,10 @@ import {
 } from "@/components/ui/select";
 import { RefreshCw, Play } from "lucide-react";
 import { toast } from "sonner";
+import { SectorAnalysis } from "@/components/SectorAnalysis";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePracticeMode } from "@/contexts/PracticeModeContext";
+import { Badge } from "@/components/ui/badge";
 
 export default function Screener() {
   const [stockSymbol, setStockSymbol] = useState("ZIM");
@@ -21,6 +25,7 @@ export default function Screener() {
   const [scale, setScale] = useState("5min");
   const [analysisType, setAnalysisType] = useState("short");
   const [isLoading, setIsLoading] = useState(false);
+  const { isPracticeMode } = usePracticeMode();
 
   const timeRanges = ["1D", "1W", "1M", "3M", "1Y", "5Y"];
   const scales = ["5s", "5min", "5V"];
@@ -74,12 +79,21 @@ export default function Screener() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-4xl font-heading font-bold mb-2">
-            Stock Screener & Analysis
-          </h1>
-          <p className="text-muted-foreground">
-            Real-time market performance tracking and analysis
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-heading font-bold mb-2">
+                Stock Screener & Analysis
+              </h1>
+              <p className="text-muted-foreground">
+                Real-time market performance tracking and analysis
+              </p>
+            </div>
+            {isPracticeMode && (
+              <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
+                Practice Mode
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Screener Controls */}
@@ -400,6 +414,11 @@ export default function Screener() {
               </Button>
             </Card>
           </div>
+        </div>
+
+        {/* Sector Analysis Section */}
+        <div className="mt-12">
+          <SectorAnalysis />
         </div>
       </div>
     </div>
