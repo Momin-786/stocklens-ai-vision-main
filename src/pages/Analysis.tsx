@@ -13,6 +13,7 @@ import {
   Activity,
   AlertCircle,
 } from "lucide-react";
+import { RiskDisclaimer } from "@/components/RiskDisclaimer";
 import { Link } from "react-router-dom";
 import { generateStockReport } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
@@ -66,6 +67,7 @@ export default function Analysis() {
 
   return (
     <div className="min-h-screen bg-background">
+          <RiskDisclaimer pageName="analysis" />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 animate-fade-in">

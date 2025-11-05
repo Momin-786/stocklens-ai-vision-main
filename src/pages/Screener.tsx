@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RiskDisclaimer } from "@/components/RiskDisclaimer";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -76,6 +77,7 @@ export default function Screener() {
 
   return (
     <div className="min-h-screen bg-background">
+       <RiskDisclaimer pageName="screener" />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 animate-fade-in">

@@ -23,6 +23,10 @@ export default function Profile() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [priceAlerts, setPriceAlerts] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+    const [showRiskDisclaimer, setShowRiskDisclaimer] = useState(
+    () => localStorage.getItem("riskDisclaimerDisabled") !== "true"
+  );
+
 
   const handleSaveProfile = () => {
     toast.success("Profile updated successfully!");
@@ -320,6 +324,32 @@ export default function Profile() {
                         <Button variant="outline">EUR (€)</Button>
                         <Button variant="outline">GBP (£)</Button>
                       </div>
+                          </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="riskDisclaimer">Risk Disclaimer</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Show risk warning on Screener and Analysis pages
+                        </p>
+                      </div>
+                      <Switch
+                        id="riskDisclaimer"
+                        checked={showRiskDisclaimer}
+                        onCheckedChange={(checked) => {
+                          setShowRiskDisclaimer(checked);
+                          if (checked) {
+                            localStorage.removeItem("riskDisclaimerDisabled");
+                            sessionStorage.clear();
+                            toast.success("Risk disclaimer enabled");
+                          } else {
+                            localStorage.setItem("riskDisclaimerDisabled", "true");
+                            toast.success("Risk disclaimer disabled");
+                          }
+                        }}
+                      />
                     </div>
 
                     <Separator />
