@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -12,6 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Table,
   TableBody,
@@ -40,15 +50,63 @@ import { usePracticeMode } from "@/contexts/PracticeModeContext";
 import { generatePortfolioReport } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
 
+const holdingFormSchema = z.object({
+  symbol: z.string().min(1, "Symbol is required").max(10, "Symbol too long").toUpperCase(),
+  name: z.string().min(1, "Company name is required").max(100),
+  shares: z.number().positive("Shares must be positive"),
+  avg_price: z.number().positive("Price must be positive"),
+});
+
+const watchlistFormSchema = z.object({
+  symbol: z.string().min(1, "Symbol is required").max(10, "Symbol too long").toUpperCase(),
+  name: z.string().min(1, "Company name is required").max(100),
+});
+
 export default function Portfolio() {
-    const { user } = useAuth();
-  const { holdings: userHoldings, watchlist: userWatchlist, loading, deleteHolding, removeFromWatchlist } = usePortfolio();
+  const { user } = useAuth();
+  const { holdings: userHoldings, watchlist: userWatchlist, loading, addHolding, deleteHolding, addToWatchlist, removeFromWatchlist } = usePortfolio();
   const [showGreeting, setShowGreeting] = useState(true);
+  const [showAddHolding, setShowAddHolding] = useState(false);
+  const [showAddWatchlist, setShowAddWatchlist] = useState(false);
   const [activeTab, setActiveTab] = useState("holdings");
-  
   const { isPracticeMode } = usePracticeMode();
   
   useNotifications({ enabled: true, interval: 30000 });
+
+  const holdingForm = useForm<z.infer<typeof holdingFormSchema>>({
+    resolver: zodResolver(holdingFormSchema),
+    defaultValues: {
+      symbol: "",
+      name: "",
+      shares: 0,
+      avg_price: 0,
+    },
+  });
+
+  const watchlistForm = useForm<z.infer<typeof watchlistFormSchema>>({
+    resolver: zodResolver(watchlistFormSchema),
+    defaultValues: {
+      symbol: "",
+      name: "",
+    },
+  });
+
+  const onAddHolding = async (values: z.infer<typeof holdingFormSchema>) => {
+    await addHolding({
+      symbol: values.symbol,
+      name: values.name,
+      shares: values.shares,
+      avg_price: values.avg_price
+    });
+    setShowAddHolding(false);
+    holdingForm.reset();
+  };
+
+  const onAddWatchlist = async (values: z.infer<typeof watchlistFormSchema>) => {
+    await addToWatchlist(values.symbol, values.name);
+    setShowAddWatchlist(false);
+    watchlistForm.reset();
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setShowGreeting(false), 5000);
@@ -79,7 +137,7 @@ export default function Portfolio() {
     return "Good Evening";
   };
 
-    // Calculate portfolio metrics
+  // Calculate portfolio metrics
   const holdings = userHoldings.map(h => ({
     ...h,
     avgPrice: h.avg_price,
@@ -89,15 +147,11 @@ export default function Portfolio() {
     gainPercent: ((Math.random() - 0.5) * 10)
   }));
 
-
-
-
   const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
   const totalGain = holdings.reduce((sum, h) => sum + h.gain, 0);
-const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)) * 100).toFixed(2) : "0.00";
+  const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)) * 100).toFixed(2) : "0.00";
   
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User";
-
 
   return (
     <div className="min-h-screen bg-background py-12">
@@ -238,7 +292,10 @@ const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)
                   <BarChart3 className="h-5 w-5 text-secondary" />
                   <h3 className="text-xl font-semibold">Your Holdings</h3>
                 </div>
-                <Button className="bg-secondary hover:bg-secondary/90">
+                <Button 
+                  className="bg-secondary hover:bg-secondary/90"
+                  onClick={() => setShowAddHolding(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Position
                 </Button>
@@ -314,7 +371,7 @@ const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
-                          <Button 
+                            <Button 
                               variant="ghost" 
                               size="icon"
                               onClick={() => deleteHolding(holding.id)}
@@ -339,14 +396,17 @@ const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)
                   <Eye className="h-5 w-5 text-secondary" />
                   <h3 className="text-xl font-semibold">Your Watchlist</h3>
                 </div>
-                <Button className="bg-secondary hover:bg-secondary/90">
+                <Button 
+                  className="bg-secondary hover:bg-secondary/90"
+                  onClick={() => setShowAddWatchlist(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add to Watchlist
                 </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {loading ? (
+                {loading ? (
                   <div className="col-span-2 text-center py-8 text-muted-foreground">
                     Loading watchlist...
                   </div>
@@ -356,7 +416,7 @@ const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)
                   </div>
                 ) : userWatchlist.map((stock, index) => (
                   <Card
-                     key={stock.id}
+                    key={stock.id}
                     className="p-5 hover-scale cursor-pointer border-2 hover:border-secondary/50 transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -366,7 +426,7 @@ const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)
                           {stock.name}
                         </p>
                       </div>
-                       <Button 
+                      <Button 
                         variant="ghost" 
                         size="icon"
                         onClick={() => removeFromWatchlist(stock.id)}
@@ -374,8 +434,7 @@ const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
-                   
-                     <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground">
                       Added {new Date(stock.created_at).toLocaleDateString()}
                     </div>
                   </Card>
@@ -481,7 +540,140 @@ const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)
             <PortfolioComparison />
           </TabsContent>
         </Tabs>
-      </div>
+
+        {/* Add Holding Dialog */}
+        <Dialog open={showAddHolding} onOpenChange={setShowAddHolding}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add Stock Position</DialogTitle>
+              <DialogDescription>
+                Enter the details of your stock holding.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...holdingForm}>
+              <form onSubmit={holdingForm.handleSubmit(onAddHolding)} className="space-y-4">
+                <FormField
+                  control={holdingForm.control}
+                  name="symbol"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Symbol</FormLabel>
+                      <FormControl>
+                        <Input placeholder="AAPL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={holdingForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Apple Inc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={holdingForm.control}
+                  name="shares"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Shares</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="10" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={holdingForm.control}
+                  name="avg_price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Average Price ($)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="150.00" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1">Add Position</Button>
+                  <Button type="button" variant="outline" onClick={() => setShowAddHolding(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Watchlist Dialog */}
+        <Dialog open={showAddWatchlist} onOpenChange={setShowAddWatchlist}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add to Watchlist</DialogTitle>
+              <DialogDescription>
+                Enter the stock you want to track.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...watchlistForm}>
+              <form onSubmit={watchlistForm.handleSubmit(onAddWatchlist)} className="space-y-4">
+                <FormField
+                  control={watchlistForm.control}
+                  name="symbol"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Symbol</FormLabel>
+                      <FormControl>
+                        <Input placeholder="AAPL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={watchlistForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Apple Inc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1">Add to Watchlist</Button>
+                  <Button type="button" variant="outline" onClick={() => setShowAddWatchlist(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+             </div>
     </div>
   );
 }

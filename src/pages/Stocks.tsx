@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import { useStockData } from "@/hooks/useStockData";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 export default function Stocks() {
+   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
   const [riskLevel, setRiskLevel] = useState([50]);
@@ -235,7 +237,7 @@ export default function Stocks() {
                       : "border hover:border-secondary/50"
                   } animate-fade-in`}
                   style={{ animationDelay: `${index * 0.05}s` }}
-                  onClick={() => toggleStock(stock.id)}
+                  onClick={() => navigate(`/analysis?symbol=${stock.symbol}`)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>

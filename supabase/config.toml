@@ -1,1 +1,7 @@
 project_id = "kgfxsxwkdbtvkanopeuf"
+
+[functions.fetch-stock-data]
+verify_jwt = false
+
+[functions.stock-ai-prediction]
+verify_jwt = false

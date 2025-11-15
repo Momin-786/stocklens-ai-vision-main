@@ -1,4 +1,5 @@
-import { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,16 +15,73 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { RiskDisclaimer } from "@/components/RiskDisclaimer";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { generateStockReport } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
 import { usePracticeMode } from "@/contexts/PracticeModeContext";
+import { useStockData } from "@/hooks/useStockData";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Analysis() {
+    const [searchParams] = useSearchParams();
+  const symbolParam = searchParams.get("symbol") || "AAPL";
   const [timeRange, setTimeRange] = useState("1M");
   const { isPracticeMode } = usePracticeMode();
+  const { data: stocks, loading } = useStockData();
+  
+const [aiInsights, setAiInsights] = useState<any>(null);
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
+  
+  const stock = stocks.find(s => s.symbol === symbolParam) || stocks[0];
+
+  // Fetch AI prediction when stock data is available
+  useEffect(() => {
+    const fetchAIPrediction = async () => {
+      if (!stock) return;
+      
+      setLoadingPrediction(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('stock-ai-prediction', {
+          body: {
+            symbol: stock.symbol,
+            name: stock.name,
+            price: stock.price,
+            change: stock.change,
+            changePercent: stock.changePercent,
+            volume: stock.volume
+          }
+        });
+
+        if (error) throw error;
+        
+        if (data) {
+          setAiInsights(data);
+        }
+      } catch (error) {
+        console.error('Error fetching AI prediction:', error);
+        toast.error('Failed to load AI prediction');
+        // Fallback to basic insights
+        setAiInsights({
+          signal: stock.changePercent > 0 ? "BUY" : "SELL",
+          confidence: Math.min(95, Math.abs(stock.changePercent || 0) * 10 + 60),
+          reasoning: "AI prediction temporarily unavailable. Showing basic analysis.",
+          keyFactors: [
+            "Price movement indicator",
+            "Technical analysis pending",
+            "Volume under review",
+            "Market sentiment analysis"
+          ]
+        });
+      } finally {
+        setLoadingPrediction(false);
+      }
+    };
+
+    fetchAIPrediction();
+  }, [stock?.symbol]);
 
   const handleDownloadReport = () => {
+    if (!stock || !aiInsights) return;
     generateStockReport({
       symbol: stock.symbol,
       name: stock.name,
@@ -37,34 +95,30 @@ export default function Analysis() {
     });
     toast.success("Report downloaded successfully!");
   };
+   const timeRanges = ["1D", "5D", "1M", "6M", "1Y"];
 
-  const stock = {
-    symbol: "AAPL",
-    name: "Apple Inc.",
-    price: 178.45,
-    change: 2.34,
-    changePercent: 1.33,
-    volume: "52.4M",
-    marketCap: "2.89T",
-    prediction: "BUY",
-    confidence: 87,
-  };
+  if (loading || !aiInsights) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+<p className="text-muted-foreground">
+          {loading ? "Loading stock data..." : "Generating AI prediction..."}
+        </p>
+              </div>
+    );
+  }
 
-  const aiInsights = {
-    signal: "BUY",
-    confidence: 87,
-    reasoning:
-      "AI predicts upward momentum based on strong trend indicators, increasing volume, and positive market sentiment. Technical analysis shows bullish patterns forming over the last 5 days.",
-    keyFactors: [
-      "50-day MA crossed above 200-day MA (Golden Cross)",
-      "Volume increased by 24% above average",
-      "RSI at 62 indicates healthy upward momentum",
-      "Support level established at $172",
-    ],
-  };
-
-  const timeRanges = ["1D", "5D", "1M", "6M", "1Y"];
-
+  if (!stock) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Stock not found</p>
+          <Link to="/stocks">
+            <Button>View All Stocks</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background">
           <RiskDisclaimer pageName="analysis" />
@@ -179,15 +233,17 @@ export default function Analysis() {
               <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t">
                 <div>
                   <p className="text-sm text-muted-foreground">Volume</p>
-                  <p className="text-lg font-semibold">{stock.volume}</p>
+                    <p className="text-lg font-semibold">{stock.volume || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Market Cap</p>
-                  <p className="text-lg font-semibold">{stock.marketCap}</p>
+                  <p className="text-sm text-muted-foreground">Category</p>
+                  <p className="text-lg font-semibold capitalize">{stock.category}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">52W High</p>
-                  <p className="text-lg font-semibold">$198.23</p>
+                   <p className="text-sm text-muted-foreground">Change</p>
+                  <p className={`text-lg font-semibold ${stock.change >= 0 ? "text-success" : "text-destructive"}`}>
+                    {stock.change >= 0 ? "+" : ""}{stock.change}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -251,55 +307,75 @@ export default function Analysis() {
           {/* AI Prediction Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* AI Prediction Card */}
-            <Card className="p-6 animate-scale-in border-2 border-success">
-              <div className="flex items-center gap-2 mb-4">
-                <Target className="h-5 w-5 text-success" />
+  <Card className={`p-6 animate-scale-in border-2 ${aiInsights?.signal === "BUY" ? "border-success" : "border-destructive"}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Target className={`h-5 w-5 ${aiInsights?.signal === "BUY" ? "text-success" : "text-destructive"}`} />
                 <h2 className="text-lg font-semibold">AI Prediction</h2>
               </div>
 
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-success/20 border-4 border-success mb-3">
-                  <TrendingUp className="h-10 w-10 text-success" />
+               <p className="text-xs text-muted-foreground mb-4">
+                {loadingPrediction ? "Analyzing..." : "Powered by GEMINI AI"}
+              </p>
+
+              {loadingPrediction ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
                 </div>
-                <h3 className="text-3xl font-bold text-success mb-2">BUY</h3>
-                <div className="flex items-center justify-center gap-2">
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-success"
-                      style={{ width: `${aiInsights.confidence}%` }}
-                    />
+              ) : (
+                <>
+                  <div className="text-center mb-6">
+                    <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full ${aiInsights.signal === "BUY" ? "bg-success/20 border-success" : "bg-destructive/20 border-destructive"} border-4 mb-3`}>
+                      {aiInsights.signal === "BUY" ? (
+                        <TrendingUp className="h-10 w-10 text-success" />
+                      ) : (
+                        <TrendingDown className="h-10 w-10 text-destructive" />
+                      )}
+                    </div>
+                    <h3 className={`text-3xl font-bold mb-2 ${aiInsights.signal === "BUY" ? "text-success" : "text-destructive"}`}>
+                      {aiInsights.signal}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${aiInsights.signal === "BUY" ? "bg-success" : "bg-destructive"}`}
+                          style={{ width: `${aiInsights.confidence}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-semibold">
+                        {Math.round(aiInsights.confidence)}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Confidence Score
+                    </p>
                   </div>
-                  <span className="text-sm font-semibold">
-                    {aiInsights.confidence}%
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Confidence Score
-                </p>
-              </div>
 
-              <div className="space-y-3">
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <p className="text-sm leading-relaxed">
-                    {aiInsights.reasoning}
-                  </p>
-                </div>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm leading-relaxed">
+                        {aiInsights.reasoning}
+                      </p>
+                    </div>
 
-                <div>
-                  <p className="text-sm font-semibold mb-2 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Key Factors
-                  </p>
-                  <ul className="space-y-2">
-                    {aiInsights.keyFactors.map((factor, i) => (
-                      <li key={i} className="text-xs flex gap-2">
-                        <span className="text-success">✓</span>
-                        <span className="text-muted-foreground">{factor}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+                    <div>
+                      <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Key Factors
+                      </p>
+                      <ul className="space-y-2">
+                        {aiInsights.keyFactors.map((factor, i) => (
+                          <li key={i} className="text-xs flex gap-2">
+                            <span className={aiInsights.signal === "BUY" ? "text-success" : "text-destructive"}>
+                              {aiInsights.signal === "BUY" ? "✓" : "⚠"}
+                            </span>
+                            <span className="text-muted-foreground">{factor}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              )}
             </Card>
 
             {/* AI Chat Widget */}
@@ -312,20 +388,18 @@ export default function Analysis() {
               <div className="space-y-3">
                 <div className="p-3 bg-muted/30 rounded-lg">
                   <p className="text-sm text-muted-foreground italic">
-                    "Why should I buy AAPL?"
+                   "Why should I {aiInsights.signal === "BUY" ? "buy" : "avoid"} {stock.symbol}?"
                   </p>
                 </div>
 
                 <div className="p-3 bg-secondary/10 rounded-lg border border-secondary/30">
                   <p className="text-sm">
-                    Based on current analysis, Apple shows strong fundamentals
-                    with positive momentum indicators. The golden cross pattern
-                    suggests continued upward movement.
+                    {aiInsights.reasoning}
                   </p>
                 </div>
 
-                <Button className="w-full bg-secondary hover:bg-secondary/90">
-                  Start Conversation
+                 <Button className="w-full bg-secondary hover:bg-secondary/90" disabled>
+                  AI Chat Coming Soon
                 </Button>
               </div>
             </Card>
