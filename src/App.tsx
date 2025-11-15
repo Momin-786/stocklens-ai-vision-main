@@ -15,7 +15,7 @@ import Analysis from "./pages/Analysis";
 import Portfolio from "./pages/Portfolio";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-
+import Comparison from "./pages/Comparison";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/stocks" element={<Stocks />} />
             <Route path="/screener" element={<Screener />} />
             <Route path="/analysis" element={<Analysis />} />
+            <Route path="/comparison" element={<Comparison />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />

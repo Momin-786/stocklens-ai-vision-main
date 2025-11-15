@@ -13,72 +13,198 @@ import {
   Target,
   Activity,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
-import { RiskDisclaimer } from "@/components/RiskDisclaimer";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { generateStockReport } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
 import { usePracticeMode } from "@/contexts/PracticeModeContext";
+import { RiskDisclaimer } from "@/components/RiskDisclaimer";
 import { useStockData } from "@/hooks/useStockData";
 import { supabase } from "@/integrations/supabase/client";
+import { AIChat } from "@/components/AIChat";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { StockSelector } from "@/components/StockSelector";
 
 export default function Analysis() {
-    const [searchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const symbolParam = searchParams.get("symbol") || "AAPL";
+  const [selectedSymbol, setSelectedSymbol] = useState(symbolParam);
   const [timeRange, setTimeRange] = useState("1M");
   const { isPracticeMode } = usePracticeMode();
   const { data: stocks, loading } = useStockData();
-  
-const [aiInsights, setAiInsights] = useState<any>(null);
+  const [aiInsights, setAiInsights] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [loadingChart, setLoadingChart] = useState(false);
+  const [customStockData, setCustomStockData] = useState<any>(null);
   
-  const stock = stocks.find(s => s.symbol === symbolParam) || stocks[0];
+  const stock = stocks.find(s => s.symbol === selectedSymbol) || customStockData || stocks[0];
 
-  // Fetch AI prediction when stock data is available
-  useEffect(() => {
-    const fetchAIPrediction = async () => {
-      if (!stock) return;
+  // Generate mock chart data based on current price and change
+  const generateMockChartData = () => {
+    if (!stock) return [];
+    
+    const currentPrice = stock.price;
+    const changePercent = stock.changePercent || 0;
+    
+    // Determine number of data points based on time range
+    const dataPoints = {
+      '1D': 24,
+      '5D': 25,
+      '1M': 30,
+      '6M': 26,
+      '1Y': 52
+    }[timeRange] || 30;
+    
+    const data = [];
+    const now = new Date();
+    
+    // Calculate starting price based on current change
+    const startPrice = currentPrice / (1 + changePercent / 100);
+    
+    for (let i = 0; i < dataPoints; i++) {
+      const progress = i / (dataPoints - 1);
       
-      setLoadingPrediction(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('stock-ai-prediction', {
-          body: {
-            symbol: stock.symbol,
-            name: stock.name,
-            price: stock.price,
-            change: stock.change,
-            changePercent: stock.changePercent,
-            volume: stock.volume
-          }
-        });
+      // Create realistic price movement with some volatility
+      const volatility = (Math.random() - 0.5) * (currentPrice * 0.02);
+      const trendPrice = startPrice + (currentPrice - startPrice) * progress;
+      const price = Math.max(trendPrice + volatility, 0.01);
+      
+      // Calculate date based on time range
+      let date = new Date(now);
+      if (timeRange === '1D') {
+        date.setHours(date.getHours() - (dataPoints - i));
+      } else if (timeRange === '5D') {
+        date.setDate(date.getDate() - (dataPoints - i));
+      } else if (timeRange === '1M') {
+        date.setDate(date.getDate() - (dataPoints - i));
+      } else if (timeRange === '6M') {
+        date.setDate(date.getDate() - (dataPoints - i) * 7);
+      } else if (timeRange === '1Y') {
+        date.setDate(date.getDate() - (dataPoints - i) * 7);
+      }
+      
+      data.push({
+        date: date.toISOString(),
+        price: parseFloat(price.toFixed(2)),
+        volume: Math.floor(Math.random() * 10000000) + 5000000
+      });
+    }
+    
+    // Ensure last point is current price
+    data[data.length - 1].price = currentPrice;
+    
+    return data;
+  };
 
+  // Fetch AI prediction function
+  const fetchAIPrediction = async () => {
+    if (!stock) return;
+    
+    setLoadingPrediction(true);
+    try {
+      console.log('Fetching AI prediction for', stock.symbol);
+      
+      const { data, error } = await supabase.functions.invoke('stock-ai-prediction', {
+        body: {
+          symbol: stock.symbol,
+          name: stock.name,
+          price: stock.price,
+          change: stock.change,
+          changePercent: stock.changePercent,
+          volume: stock.volume
+        }
+      });
+
+      if (error) {
+        console.error('AI prediction error:', error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log('AI prediction received:', data);
+        setAiInsights(data);
+        toast.success('AI prediction loaded');
+      } else {
+        throw new Error('No data received from AI prediction');
+      }
+    } catch (error) {
+      console.error('Error fetching AI prediction:', error);
+      toast.error('Failed to load AI prediction - showing basic analysis');
+      // Fallback to basic insights
+      setAiInsights({
+        signal: stock.changePercent > 0 ? "BUY" : "SELL",
+        confidence: Math.min(95, Math.abs(stock.changePercent || 0) * 10 + 60),
+        reasoning: "AI prediction temporarily unavailable. Showing basic analysis based on price movement.",
+        keyFactors: [
+          "Price movement indicator",
+          "Technical analysis pending",
+          "Volume under review",
+          "Market sentiment analysis"
+        ],
+        indicators: [
+          { label: "RSI (14)", value: "N/A", status: "Neutral" },
+          { label: "MACD", value: "N/A", status: "Neutral" },
+          { label: "50-Day MA", value: "N/A", status: "Neutral" },
+          { label: "200-Day MA", value: "N/A", status: "Neutral" }
+        ],
+        modelUsed: "Gemini 2.5 Flash"
+      });
+    } finally {
+      setLoadingPrediction(false);
+    }
+  };
+
+  // Handle stock selection change
+  const handleStockChange = async (newSymbol: string) => {
+    setSelectedSymbol(newSymbol);
+    navigate(`/analysis?symbol=${newSymbol}`);
+    
+    // If stock is not in the default list, fetch its data
+    if (!stocks.find(s => s.symbol === newSymbol)) {
+      try {
+        const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
+          body: { symbols: [newSymbol] }
+        });
+        
         if (error) throw error;
         
-        if (data) {
-          setAiInsights(data);
+        if (data?.stocks?.[0]) {
+          setCustomStockData({
+            symbol: data.stocks[0].symbol,
+            name: data.stocks[0].name || newSymbol,
+            price: data.stocks[0].price,
+            change: data.stocks[0].change,
+            changePercent: data.stocks[0].changePercent,
+            volume: data.stocks[0].volume,
+            category: 'custom'
+          });
         }
       } catch (error) {
-        console.error('Error fetching AI prediction:', error);
-        toast.error('Failed to load AI prediction');
-        // Fallback to basic insights
-        setAiInsights({
-          signal: stock.changePercent > 0 ? "BUY" : "SELL",
-          confidence: Math.min(95, Math.abs(stock.changePercent || 0) * 10 + 60),
-          reasoning: "AI prediction temporarily unavailable. Showing basic analysis.",
-          keyFactors: [
-            "Price movement indicator",
-            "Technical analysis pending",
-            "Volume under review",
-            "Market sentiment analysis"
-          ]
-        });
-      } finally {
-        setLoadingPrediction(false);
+        console.error('Error fetching custom stock data:', error);
+        toast.error('Failed to load stock data');
       }
-    };
+    } else {
+      setCustomStockData(null);
+    }
+  };
 
-    fetchAIPrediction();
-  }, [stock?.symbol]);
+  // Generate chart data when stock or time range changes
+  useEffect(() => {
+    if (stock) {
+      setLoadingChart(true);
+      const mockData = generateMockChartData();
+      setChartData(mockData);
+      setLoadingChart(false);
+      
+      // Fetch AI prediction after chart data is ready
+      if (!aiInsights) {
+        fetchAIPrediction();
+      }
+    }
+  }, [selectedSymbol, timeRange, stock]);
 
   const handleDownloadReport = () => {
     if (!stock || !aiInsights) return;
@@ -95,15 +221,24 @@ const [aiInsights, setAiInsights] = useState<any>(null);
     });
     toast.success("Report downloaded successfully!");
   };
-   const timeRanges = ["1D", "5D", "1M", "6M", "1Y"];
+
+  const timeRanges = ["1D", "5D", "1M", "6M", "1Y"];
 
   if (loading || !aiInsights) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-<p className="text-muted-foreground">
-          {loading ? "Loading stock data..." : "Generating AI prediction..."}
-        </p>
-              </div>
+        <div className="text-center space-y-4">
+          <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+          <p className="text-muted-foreground">
+            {loading ? "Loading stock data..." : "Generating AI prediction..."}
+          </p>
+          {loadingPrediction && (
+            <p className="text-sm text-muted-foreground">
+              This may take a moment...
+            </p>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -119,18 +254,26 @@ const [aiInsights, setAiInsights] = useState<any>(null);
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-background">
-          <RiskDisclaimer pageName="analysis" />
+      <RiskDisclaimer pageName="analysis" />
+      <AIChat />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 animate-fade-in">
+        <div className="flex flex-col gap-4 mb-8 animate-fade-in">
           <div className="flex items-center gap-4">
             <Link to="/stocks">
               <Button variant="outline" size="icon">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
+            <div className="flex-1">
+              <StockSelector value={selectedSymbol} onValueChange={handleStockChange} />
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-heading font-bold">
@@ -154,23 +297,23 @@ const [aiInsights, setAiInsights] = useState<any>(null);
               </div>
               <p className="text-muted-foreground">{stock.name}</p>
             </div>
-          </div>
 
-          <div className="flex gap-2">
-            {isPracticeMode && (
-              <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
-                Practice Mode
-              </Badge>
-            )}
-            <Button variant="outline" size="sm" onClick={handleDownloadReport}>
-              <Download className="h-4 w-4 mr-2" />
-              Download Report
-            </Button>
-            <Link to="/stocks">
-              <Button variant="outline" size="sm">
-                Compare Another
+            <div className="flex gap-2">
+              {isPracticeMode && (
+                <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
+                  Practice Mode
+                </Badge>
+              )}
+              <Button variant="outline" size="sm" onClick={handleDownloadReport}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Report
               </Button>
-            </Link>
+              <Link to="/stocks">
+                <Button variant="outline" size="sm">
+                  Compare Another
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -216,31 +359,62 @@ const [aiInsights, setAiInsights] = useState<any>(null);
                 </div>
               </div>
 
-              {/* Chart Placeholder */}
-              <div className="h-80 bg-muted/30 rounded-lg flex items-end gap-1 px-4 pb-4">
-                {[...Array(50)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-t bg-gradient-to-t from-secondary to-secondary/40"
-                    style={{
-                      height: `${Math.random() * 70 + 30}%`,
-                      opacity: 0.8 + Math.random() * 0.2,
-                    }}
-                  />
-                ))}
-              </div>
+              {/* Chart */}
+              {loadingChart ? (
+                <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
+                  <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+                </div>
+              ) : (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        domain={['dataMin - 5', 'dataMax + 5']}
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        formatter={(value: any) => [`$${value}`, 'Price']}
+                        labelFormatter={(date) => new Date(date).toLocaleString()}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="price" 
+                        stroke="hsl(var(--secondary))" 
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t">
                 <div>
                   <p className="text-sm text-muted-foreground">Volume</p>
-                    <p className="text-lg font-semibold">{stock.volume || "N/A"}</p>
+                  <p className="text-lg font-semibold">{stock.volume || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Category</p>
                   <p className="text-lg font-semibold capitalize">{stock.category}</p>
                 </div>
                 <div>
-                   <p className="text-sm text-muted-foreground">Change</p>
+                  <p className="text-sm text-muted-foreground">Change</p>
                   <p className={`text-lg font-semibold ${stock.change >= 0 ? "text-success" : "text-destructive"}`}>
                     {stock.change >= 0 ? "+" : ""}{stock.change}
                   </p>
@@ -263,12 +437,7 @@ const [aiInsights, setAiInsights] = useState<any>(null);
                 </TabsList>
 
                 <TabsContent value="indicators" className="space-y-4 mt-4">
-                  {[
-                    { label: "RSI (14)", value: "62.3", status: "Bullish" },
-                    { label: "MACD", value: "+1.24", status: "Bullish" },
-                    { label: "50-Day MA", value: "$174.50", status: "Above" },
-                    { label: "200-Day MA", value: "$168.20", status: "Above" },
-                  ].map((indicator, i) => (
+                  {aiInsights?.indicators?.map((indicator: any, i: number) => (
                     <div
                       key={i}
                       className="flex items-center justify-between p-3 bg-muted/30 rounded"
@@ -307,14 +476,24 @@ const [aiInsights, setAiInsights] = useState<any>(null);
           {/* AI Prediction Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* AI Prediction Card */}
-  <Card className={`p-6 animate-scale-in border-2 ${aiInsights?.signal === "BUY" ? "border-success" : "border-destructive"}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Target className={`h-5 w-5 ${aiInsights?.signal === "BUY" ? "text-success" : "text-destructive"}`} />
-                <h2 className="text-lg font-semibold">AI Prediction</h2>
+            <Card className={`p-6 animate-scale-in border-2 ${aiInsights?.signal === "BUY" ? "border-success" : "border-destructive"}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Target className={`h-5 w-5 ${aiInsights?.signal === "BUY" ? "text-success" : "text-destructive"}`} />
+                  <h2 className="text-lg font-semibold">AI Prediction</h2>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={fetchAIPrediction}
+                  disabled={loadingPrediction}
+                  className="h-8"
+                >
+                  <RefreshCw className={`h-3 w-3 ${loadingPrediction ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
-
-               <p className="text-xs text-muted-foreground mb-4">
-                {loadingPrediction ? "Analyzing..." : "Powered by GEMINI AI"}
+              <p className="text-xs text-muted-foreground mb-4">
+                {loadingPrediction ? "Analyzing..." : `Powered by ${aiInsights?.modelUsed || 'Lovable AI'}`}
               </p>
 
               {loadingPrediction ? (
@@ -363,7 +542,7 @@ const [aiInsights, setAiInsights] = useState<any>(null);
                         Key Factors
                       </p>
                       <ul className="space-y-2">
-                        {aiInsights.keyFactors.map((factor, i) => (
+                        {aiInsights.keyFactors.map((factor: string, i: number) => (
                           <li key={i} className="text-xs flex gap-2">
                             <span className={aiInsights.signal === "BUY" ? "text-success" : "text-destructive"}>
                               {aiInsights.signal === "BUY" ? "✓" : "⚠"}
@@ -388,7 +567,7 @@ const [aiInsights, setAiInsights] = useState<any>(null);
               <div className="space-y-3">
                 <div className="p-3 bg-muted/30 rounded-lg">
                   <p className="text-sm text-muted-foreground italic">
-                   "Why should I {aiInsights.signal === "BUY" ? "buy" : "avoid"} {stock.symbol}?"
+                    "Why should I {aiInsights.signal === "BUY" ? "buy" : "avoid"} {stock.symbol}?"
                   </p>
                 </div>
 
@@ -398,9 +577,9 @@ const [aiInsights, setAiInsights] = useState<any>(null);
                   </p>
                 </div>
 
-                 <Button className="w-full bg-secondary hover:bg-secondary/90" disabled>
-                  AI Chat Coming Soon
-                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Click the chat button in the bottom-right corner to ask any questions about stocks!
+                </p>
               </div>
             </Card>
 
@@ -432,4 +611,3 @@ const [aiInsights, setAiInsights] = useState<any>(null);
     </div>
   );
 }
- 

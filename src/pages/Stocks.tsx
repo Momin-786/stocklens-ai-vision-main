@@ -11,8 +11,8 @@ import {
   TrendingDown,
   LayoutGrid,
   List,
-    RefreshCw,
   Filter,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePracticeMode } from "@/contexts/PracticeModeContext";
@@ -20,16 +20,16 @@ import { useStockData } from "@/hooks/useStockData";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 export default function Stocks() {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
   const [riskLevel, setRiskLevel] = useState([50]);
   const { isPracticeMode } = usePracticeMode();
 
- const categories = ["All", "technology", "finance", "energy", "healthcare", "consumer"];
+  const categories = ["All", "technology", "finance", "energy", "healthcare", "consumer"];
   const [activeCategory, setActiveCategory] = useState("All");
 
-
+  // Fetch real stock data from Alpha Vantage (when not in practice mode)
   const { data: realStocks, lastUpdate: realLastUpdate, loading, refetch } = useStockData(!isPracticeMode);
   
   // Use simulated updates in practice mode
@@ -38,7 +38,6 @@ export default function Stocks() {
   // Use appropriate data based on mode
   const stocks = isPracticeMode ? practiceStocks : realStocks;
   const lastUpdate = isPracticeMode ? practiceLastUpdate : realLastUpdate;
-
 
   const toggleStock = (id: string) => {
     setSelectedStocks((prev) =>
@@ -64,11 +63,11 @@ export default function Stocks() {
               <p className="text-muted-foreground">
                 {isPracticeMode 
                   ? "Practice mode - Simulated data updates" 
-                  : "Real-time stock data from Alpha Vantage"}
+                  : "Live stock data (showing 7 stocks to optimize API usage)"}
               </p>
             </div>
             <div className="flex gap-2 items-center">
-               {loading && (
+              {loading && (
                 <Badge variant="outline" className="bg-muted">
                   <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
                   Loading...
@@ -98,7 +97,7 @@ export default function Stocks() {
               )}
             </div>
           </div>
-           {!isPracticeMode && !loading && (
+          {!isPracticeMode && !loading && (
             <p className="text-xs text-muted-foreground mt-2">
               Last updated: {lastUpdate.toLocaleTimeString()}
             </p>
@@ -121,11 +120,11 @@ export default function Stocks() {
                   {categories.map((cat) => (
                     <Badge
                       key={cat}
-                 variant={activeCategory === cat ? "default" : "outline"}
+                      variant={activeCategory === cat ? "default" : "outline"}
                       className="cursor-pointer hover-scale"
                       onClick={() => setActiveCategory(cat)}
                     >
-                     {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </Badge>
                   ))}
                 </div>
@@ -215,7 +214,7 @@ export default function Stocks() {
             </div>
 
             {/* Stock Grid/List */}
-             {loading && stocks.length === 0 ? (
+            {loading && stocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <RefreshCw className="h-12 w-12 text-muted-foreground animate-spin mb-4" />
                 <p className="text-muted-foreground">Loading stock data...</p>
@@ -228,7 +227,7 @@ export default function Stocks() {
                     : "space-y-3"
                 }
               >
-                {filteredStocks.map((stock, index) => (
+                 {filteredStocks.map((stock, index) => (
                 <Card
                   key={stock.id}
                   className={`p-5 cursor-pointer transition-all hover-scale ${

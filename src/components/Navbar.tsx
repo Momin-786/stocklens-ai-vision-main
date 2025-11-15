@@ -72,6 +72,14 @@ export const Navbar = () => {
             Screener
           </Link> */}
           <Link
+           to="/comparison"
+            className={`text-sm font-medium transition-colors hover:text-secondary ${
+              isActive("/comparison") ? "text-secondary" : "text-muted-foreground"
+            }`}
+          >
+            Compare
+          </Link>
+          <Link
             to="/analysis"
             className={`text-sm font-medium transition-colors hover:text-secondary ${
               isActive("/analysis") ? "text-secondary" : "text-muted-foreground"

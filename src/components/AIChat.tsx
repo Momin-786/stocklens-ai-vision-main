@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, X, Send, Sparkles } from "lucide-react";
+import { MessageSquare, X, Send, Sparkles, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
-
+import { supabase } from "@/integrations/supabase/client";
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -23,7 +23,10 @@ export const AIChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -31,21 +34,7 @@ export const AIChat = () => {
     }
   }, [messages]);
 
-  const mockAIResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes("buy") || lowerMessage.includes("should i invest")) {
-      return "Based on current market analysis, I'd recommend diversifying your portfolio. Consider factors like your risk tolerance, investment timeline, and market volatility. For specific stock recommendations, check the Analysis page for AI-powered predictions with confidence scores.";
-    } else if (lowerMessage.includes("aapl") || lowerMessage.includes("apple")) {
-      return "Apple (AAPL) is currently showing strong fundamentals with positive momentum indicators. The stock is trading above both 50-day and 200-day moving averages, suggesting a bullish trend. Check the Analysis page for detailed AI predictions.";
-    } else if (lowerMessage.includes("market") || lowerMessage.includes("trend")) {
-      return "Current market conditions show moderate volatility with tech sector leading gains. The Market Heatmap on the Screener page provides real-time industry performance. I recommend monitoring key indicators like RSI and MACD for timing your trades.";
-    } else if (lowerMessage.includes("help") || lowerMessage.includes("how")) {
-      return "I can help you with:\n• Stock analysis and predictions\n• Market trends and insights\n• Portfolio recommendations\n• Technical indicator explanations\n• Investment strategies\n\nJust ask me anything!";
-    } else {
-      return "That's an interesting question! Based on current market data and AI analysis, I suggest checking the Screener for real-time performance charts and the Analysis page for detailed predictions. What specific stocks are you interested in?";
-    }
-  };
+ 
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -60,22 +49,110 @@ export const AIChat = () => {
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI thinking time
-    setTimeout(() => {
+    try {
+      // Prepare conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      const { data, error } = await supabase.functions.invoke('stock-chat', {
+        body: {
+          message: input,
+          conversationHistory
+        }
+      });
+
+      if (error) throw error;
+
       const aiResponse: Message = {
         role: "assistant",
-        content: mockAIResponse(input),
+        content: data.message || "I apologize, but I couldn't generate a response. Please try again.",
         timestamp: new Date(),
       };
+      
       setMessages((prev) => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error in AI chat:', error);
+      toast.error('Failed to get AI response');
+      
+      const errorResponse: Message = {
+        role: "assistant",
+        content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+      }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      audioChunksRef.current = [];
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      toast.success("Recording started - speak now");
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast.error('Failed to access microphone. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      toast.info("Processing your voice...");
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      
+      reader.onloadend = async () => {
+        const base64Audio = (reader.result as string).split(',')[1];
+        
+        const { data, error } = await supabase.functions.invoke('voice-to-text', {
+          body: { audio: base64Audio }
+        });
+
+        if (error) throw error;
+
+        if (data?.text) {
+          setInput(data.text);
+          toast.success("Voice transcribed successfully!");
+        }
+      };
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      toast.error('Failed to transcribe audio. Please try again.');
     }
   };
 
@@ -196,17 +273,30 @@ export const AIChat = () => {
           {/* Input */}
           <div className="p-4 border-t">
             <div className="flex gap-2">
+              <Button
+                variant={isRecording ? "destructive" : "outline"}
+                size="icon"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isTyping}
+                title={isRecording ? "Stop recording" : "Start voice input"}
+              >
+                {isRecording ? (
+                  <MicOff className="h-4 w-4 animate-pulse" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
               <Input
-                placeholder="Ask me anything..."
+                placeholder={isRecording ? "Listening..." : "Ask me anything..."}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                disabled={isTyping}
+                  disabled={isTyping || isRecording}
               />
               <Button
                 size="icon"
                 onClick={handleSend}
-                disabled={!input.trim() || isTyping}
+                 disabled={!input.trim() || isTyping || isRecording}
                 className="bg-secondary hover:bg-secondary/90"
               >
                 <Send className="h-4 w-4" />
