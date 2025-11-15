@@ -63,14 +63,14 @@ export const Navbar = () => {
           >
             Stocks
           </Link>
-          <Link
+          {/* <Link
             to="/screener"
             className={`text-sm font-medium transition-colors hover:text-secondary ${
               isActive("/screener") ? "text-secondary" : "text-muted-foreground"
             }`}
           >
             Screener
-          </Link>
+          </Link> */}
           <Link
             to="/analysis"
             className={`text-sm font-medium transition-colors hover:text-secondary ${
