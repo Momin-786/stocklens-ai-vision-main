@@ -57,17 +57,14 @@ export const Onboarding = () => {
   useEffect(() => {
       // Small delay to ensure DOM is ready
     const timer = setTimeout(() => {
-      const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
-      if (!hasSeenOnboarding) {
-        setIsOpen(true);
-      }
+     setIsOpen(true);
     }, 500);
 
     return () => clearTimeout(timer);
   }, []);
 
   const handleComplete = () => {
-    localStorage.setItem("hasSeenOnboarding", "true");
+
     setIsOpen(false);
   };
 
