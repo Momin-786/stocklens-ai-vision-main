@@ -104,16 +104,18 @@ export default function Landing() {
             
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-5 justify-center items-center mb-16 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              <Link to="/screener">
+                <Link to="/auth">
                 <Button size="lg" className="bg-secondary hover:bg-secondary/90 text-lg px-10 py-6 shadow-xl hover:shadow-2xl transition-all hover-scale group">
-                  Start Analyzing Free
+                      Get Started Free
                   <TrendingUp className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="text-lg px-10 py-6 border-2 hover:bg-secondary/10 hover:border-secondary transition-all">
-                <Play className="mr-2 h-5 w-5" />
-                Watch 2-min Demo
-              </Button>
+              <Link to="/stocks">
+                <Button size="lg" variant="outline" className="text-lg px-10 py-6 border-2 hover:bg-secondary/10 hover:border-secondary transition-all">
+                  <Play className="mr-2 h-5 w-5" />
+                  View Live Stocks
+                </Button>
+              </Link>
             </div>
 
             {/* Stats Row */}

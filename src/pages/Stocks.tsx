@@ -10,11 +10,13 @@ import {
   TrendingDown,
   LayoutGrid,
   List,
+    RefreshCw,
   Filter,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 import { usePracticeMode } from "@/contexts/PracticeModeContext";
+import { useStockData } from "@/hooks/useStockData";
+import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
 
 export default function Stocks() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -22,94 +24,19 @@ export default function Stocks() {
   const [riskLevel, setRiskLevel] = useState([50]);
   const { isPracticeMode } = usePracticeMode();
 
-  const categories = ["All", "Tech", "Finance", "Energy", "Healthcare", "Consumer"];
+ const categories = ["All", "technology", "finance", "energy", "healthcare", "consumer"];
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const initialStocks = [
-    {
-      id: "AAPL",
-      name: "Apple Inc.",
-      symbol: "AAPL",
-      price: 178.45,
-      change: 2.34,
-      changePercent: 1.33,
-      volume: "52.4M",
-      category: "Tech",
-    },
-    {
-      id: "MSFT",
-      name: "Microsoft Corporation",
-      symbol: "MSFT",
-      price: 374.82,
-      change: -1.45,
-      changePercent: -0.39,
-      volume: "28.9M",
-      category: "Tech",
-    },
-    {
-      id: "GOOGL",
-      name: "Alphabet Inc.",
-      symbol: "GOOGL",
-      price: 139.67,
-      change: 3.21,
-      changePercent: 2.35,
-      volume: "31.2M",
-      category: "Tech",
-    },
-    {
-      id: "JPM",
-      name: "JPMorgan Chase",
-      symbol: "JPM",
-      price: 156.34,
-      change: 1.89,
-      changePercent: 1.22,
-      volume: "12.5M",
-      category: "Finance",
-    },
-    {
-      id: "TSLA",
-      name: "Tesla Inc.",
-      symbol: "TSLA",
-      price: 242.78,
-      change: -4.56,
-      changePercent: -1.84,
-      volume: "89.3M",
-      category: "Tech",
-    },
-    {
-      id: "XOM",
-      name: "Exxon Mobil",
-      symbol: "XOM",
-      price: 102.45,
-      change: 0.87,
-      changePercent: 0.86,
-      volume: "18.7M",
-      category: "Energy",
-    },
-    {
-      id: "JNJ",
-      name: "Johnson & Johnson",
-      symbol: "JNJ",
-      price: 167.89,
-      change: 1.23,
-      changePercent: 0.74,
-      volume: "9.2M",
-      category: "Healthcare",
-    },
-    {
-      id: "V",
-      name: "Visa Inc.",
-      symbol: "V",
-      price: 259.12,
-      change: 2.67,
-      changePercent: 1.04,
-      volume: "7.8M",
-      category: "Finance",
-    },
-  ];
 
-  // Use real-time updates hook
-  const { data: stocks, lastUpdate } = useRealtimeUpdates(initialStocks, !isPracticeMode);
+  const { data: realStocks, lastUpdate: realLastUpdate, loading, refetch } = useStockData(!isPracticeMode);
+  
+  // Use simulated updates in practice mode
+  const { data: practiceStocks, lastUpdate: practiceLastUpdate } = useRealtimeUpdates(realStocks, isPracticeMode);
+  
+  // Use appropriate data based on mode
+  const stocks = isPracticeMode ? practiceStocks : realStocks;
+  const lastUpdate = isPracticeMode ? practiceLastUpdate : realLastUpdate;
+
 
   const toggleStock = (id: string) => {
     setSelectedStocks((prev) =>
@@ -133,14 +60,34 @@ export default function Stocks() {
                 Stock Selection
               </h1>
               <p className="text-muted-foreground">
-                Choose stocks to analyze and get AI-powered insights
+                {isPracticeMode 
+                  ? "Practice mode - Simulated data updates" 
+                  : "Real-time stock data from Alpha Vantage"}
               </p>
             </div>
             <div className="flex gap-2 items-center">
-              {!isPracticeMode && (
-                <Badge variant="outline" className="bg-success/10 text-success border-success">
-                  Live Updates
+               {loading && (
+                <Badge variant="outline" className="bg-muted">
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  Loading...
                 </Badge>
+              )}
+              {!isPracticeMode && !loading && (
+                <>
+                  <Badge variant="outline" className="bg-success/10 text-success border-success">
+                    Live Data
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={refetch}
+                    disabled={loading}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </Button>
+                </>
               )}
               {isPracticeMode && (
                 <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
@@ -149,6 +96,11 @@ export default function Stocks() {
               )}
             </div>
           </div>
+           {!isPracticeMode && !loading && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -167,11 +119,11 @@ export default function Stocks() {
                   {categories.map((cat) => (
                     <Badge
                       key={cat}
-                      variant={activeCategory === cat ? "default" : "outline"}
+                 variant={activeCategory === cat ? "default" : "outline"}
                       className="cursor-pointer hover-scale"
                       onClick={() => setActiveCategory(cat)}
                     >
-                      {cat}
+                     {cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </Badge>
                   ))}
                 </div>
@@ -261,14 +213,20 @@ export default function Stocks() {
             </div>
 
             {/* Stock Grid/List */}
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 gap-4"
-                  : "space-y-3"
-              }
-            >
-              {filteredStocks.map((stock, index) => (
+             {loading && stocks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <RefreshCw className="h-12 w-12 text-muted-foreground animate-spin mb-4" />
+                <p className="text-muted-foreground">Loading stock data...</p>
+              </div>
+            ) : (
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+                    : "space-y-3"
+                }
+              >
+                {filteredStocks.map((stock, index) => (
                 <Card
                   key={stock.id}
                   className={`p-5 cursor-pointer transition-all hover-scale ${
@@ -336,6 +294,7 @@ export default function Stocks() {
                 </Card>
               ))}
             </div>
+            )}
           </main>
         </div>
       </div>

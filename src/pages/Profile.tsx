@@ -1,4 +1,7 @@
-import { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +23,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import profileAvatar from "@/assets/profile-avatar.jpg";
 
 export default function Profile() {
+    const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [fullName, setFullName] = useState("");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [priceAlerts, setPriceAlerts] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -28,8 +35,45 @@ export default function Profile() {
   );
 
 
-  const handleSaveProfile = () => {
-    toast.success("Profile updated successfully!");
+ useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (error) throw error;
+      
+      setProfile(data);
+      setFullName(data?.full_name || "");
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: fullName })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+      
+      toast.success("Profile updated successfully!");
+      fetchProfile();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update profile");
+    }
   };
 
   const handleSavePreferences = () => {
@@ -55,16 +99,18 @@ export default function Profile() {
                 <Avatar className="w-24 h-24">
                   <AvatarImage src={profileAvatar} alt="Momin" />
                   <AvatarFallback className="bg-gradient-to-br from-secondary to-accent text-3xl font-bold text-white">
-                    M
+                 {profile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <button className="absolute bottom-0 right-0 p-2 rounded-full bg-secondary text-white hover:bg-secondary/90 transition-colors shadow-lg">
                   <Camera className="h-4 w-4" />
                 </button>
               </div>
-              <h3 className="font-semibold text-lg mb-1">Momin</h3>
+         <h3 className="font-semibold text-lg mb-1">
+                {loading ? "Loading..." : profile?.full_name || "User"}
+              </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                momin@gmail.com
+                  {user?.email}
               </p>
               <div className="text-xs text-muted-foreground">
                 Member since Jan 2024
@@ -107,23 +153,14 @@ export default function Profile() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input
-                          id="firstName"
-                          defaultValue="Momin"
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input
-                          id="lastName"
-                          defaultValue="Abdul"
-                          className="mt-1.5"
-                        />
-                      </div>
+                   <div>
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <Input
+                        id="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="mt-1.5"
+                      />
                     </div>
 
                     <div>
@@ -132,23 +169,17 @@ export default function Profile() {
                         <Input
                           id="email"
                           type="email"
-                          defaultValue="momin@gmail.com"
+                          value={user?.email || ""}
+                          disabled
                           className="flex-1"
                         />
-                        <Button variant="outline" size="icon">
+                        <Button variant="outline" size="icon" disabled>
                           <Mail className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+1 (555) 000-0000"
-                        className="mt-1.5"
-                      />
+                   <p className="text-xs text-muted-foreground mt-1">
+                        Email cannot be changed
+                      </p>
                     </div>
 
                     <Separator />

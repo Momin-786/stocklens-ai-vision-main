@@ -1,15 +1,25 @@
-import { Moon, Sun, TrendingUp, FlaskConical } from "lucide-react";
+/* eslint-disable react-hooks/rules-of-hooks */
+import { Moon, Sun, TrendingUp, FlaskConical, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { usePracticeMode } from "@/contexts/PracticeModeContext";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Navbar = () => {
   const location = useLocation();
+    const navigate = useNavigate();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const { isPracticeMode, togglePracticeMode } = usePracticeMode();
+  const { user, loading, signOut } = useAuth();
 
+  useEffect(() => {
+    // Redirect to auth if not logged in and not on landing or auth page
+    if (!loading && !user && location.pathname !== "/" && location.pathname !== "/auth") {
+      navigate("/auth");
+    }
+  }, [user, loading, location.pathname, navigate]);
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
     if (savedTheme) {
@@ -23,6 +33,7 @@ export const Navbar = () => {
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
     document.documentElement.classList.toggle("dark", newTheme === "dark");
+
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -108,12 +119,35 @@ export const Navbar = () => {
               <Sun className="h-5 w-5" />
             )}
           </Button>
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-            Login
-          </Button>
-          <Button size="sm" className="bg-secondary hover:bg-secondary/90">
-            Sign Up
-          </Button>
+          {user ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={signOut}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:inline-flex"
+                onClick={() => navigate("/auth")}
+              >
+                Login
+              </Button>
+              <Button
+                size="sm"
+                className="bg-secondary hover:bg-secondary/90"
+                onClick={() => navigate("/auth")}
+              >
+                Sign Up
+              </Button>
+            </>
+          )}
         </div>
       </nav>
     </header>

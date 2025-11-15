@@ -8,6 +8,7 @@ import { AIChat } from "@/components/AIChat";
 import { Onboarding } from "@/components/Onboarding";
 import { PracticeModeProvider } from "@/contexts/PracticeModeContext";
 import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 import Stocks from "./pages/Stocks";
 import Screener from "./pages/Screener";
 import Analysis from "./pages/Analysis";
@@ -28,6 +29,7 @@ const App = () => (
           <Navbar />
           <Routes>
             <Route path="/" element={<Landing />} />
+                        <Route path="/auth" element={<Auth />} />
             <Route path="/stocks" element={<Stocks />} />
             <Route path="/screener" element={<Screener />} />
             <Route path="/analysis" element={<Analysis />} />

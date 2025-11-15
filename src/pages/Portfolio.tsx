@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { usePortfolio } from "@/hooks/usePortfolio";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -39,9 +41,11 @@ import { generatePortfolioReport } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
 
 export default function Portfolio() {
+    const { user } = useAuth();
+  const { holdings: userHoldings, watchlist: userWatchlist, loading, deleteHolding, removeFromWatchlist } = usePortfolio();
   const [showGreeting, setShowGreeting] = useState(true);
   const [activeTab, setActiveTab] = useState("holdings");
-  const userName = "Momin";
+  
   const { isPracticeMode } = usePracticeMode();
   
   useNotifications({ enabled: true, interval: 30000 });
@@ -75,52 +79,25 @@ export default function Portfolio() {
     return "Good Evening";
   };
 
-  const [holdings, setHoldings] = useState([
-    {
-      id: 1,
-      symbol: "AAPL",
-      name: "Apple Inc.",
-      shares: 50,
-      avgPrice: 170.23,
-      currentPrice: 178.45,
-      value: 8922.5,
-      gain: 411,
-      gainPercent: 4.82,
-    },
-    {
-      id: 2,
-      symbol: "MSFT",
-      name: "Microsoft Corporation",
-      shares: 25,
-      avgPrice: 380.45,
-      currentPrice: 374.82,
-      value: 9370.5,
-      gain: -140.75,
-      gainPercent: -1.48,
-    },
-    {
-      id: 3,
-      symbol: "GOOGL",
-      name: "Alphabet Inc.",
-      shares: 75,
-      avgPrice: 135.67,
-      currentPrice: 139.67,
-      value: 10475.25,
-      gain: 300,
-      gainPercent: 2.95,
-    },
-  ]);
+    // Calculate portfolio metrics
+  const holdings = userHoldings.map(h => ({
+    ...h,
+    avgPrice: h.avg_price,
+    currentPrice: h.avg_price * (1 + (Math.random() - 0.5) * 0.1), // Demo: simulate price changes
+    value: h.shares * h.avg_price * (1 + (Math.random() - 0.5) * 0.1),
+    gain: h.shares * h.avg_price * ((Math.random() - 0.5) * 0.1),
+    gainPercent: ((Math.random() - 0.5) * 10)
+  }));
 
-  const watchlist = [
-    { symbol: "TSLA", name: "Tesla Inc.", price: 242.78, change: -1.84 },
-    { symbol: "NVDA", name: "NVIDIA Corporation", price: 475.32, change: 3.21 },
-    { symbol: "META", name: "Meta Platforms", price: 312.45, change: 1.67 },
-    { symbol: "AMZN", name: "Amazon.com Inc.", price: 145.23, change: -0.45 },
-  ];
+
+
 
   const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
   const totalGain = holdings.reduce((sum, h) => sum + h.gain, 0);
-  const totalGainPercent = ((totalGain / (totalValue - totalGain)) * 100).toFixed(2);
+const totalGainPercent = totalValue > 0 ? ((totalGain / (totalValue - totalGain)) * 100).toFixed(2) : "0.00";
+  
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User";
+
 
   return (
     <div className="min-h-screen bg-background py-12">
@@ -282,7 +259,19 @@ export default function Portfolio() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {holdings.map((holding) => (
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Loading portfolio...
+                        </TableCell>
+                      </TableRow>
+                    ) : holdings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No holdings yet. Add your first stock position!
+                        </TableCell>
+                      </TableRow>
+                    ) : holdings.map((holding) => (
                       <TableRow key={holding.id} className="hover:bg-muted/50">
                         <TableCell className="font-semibold">
                           {holding.symbol}
@@ -325,10 +314,11 @@ export default function Portfolio() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" size="icon">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
+                          <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => deleteHolding(holding.id)}
+                            >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
@@ -356,9 +346,17 @@ export default function Portfolio() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {watchlist.map((stock, index) => (
+                 {loading ? (
+                  <div className="col-span-2 text-center py-8 text-muted-foreground">
+                    Loading watchlist...
+                  </div>
+                ) : userWatchlist.length === 0 ? (
+                  <div className="col-span-2 text-center py-8 text-muted-foreground">
+                    Your watchlist is empty. Add stocks to track them!
+                  </div>
+                ) : userWatchlist.map((stock, index) => (
                   <Card
-                    key={index}
+                     key={stock.id}
                     className="p-5 hover-scale cursor-pointer border-2 hover:border-secondary/50 transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -368,31 +366,17 @@ export default function Portfolio() {
                           {stock.name}
                         </p>
                       </div>
-                      <Button variant="ghost" size="icon">
+                       <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => removeFromWatchlist(stock.id)}
+                      >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-2xl font-bold">
-                          ${stock.price.toFixed(2)}
-                        </p>
-                      </div>
-                      <div
-                        className={`flex items-center gap-1 ${
-                          stock.change >= 0 ? "text-success" : "text-destructive"
-                        }`}
-                      >
-                        {stock.change >= 0 ? (
-                          <TrendingUp className="h-4 w-4" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4" />
-                        )}
-                        <span className="font-semibold">
-                          {stock.change >= 0 ? "+" : ""}
-                          {stock.change}%
-                        </span>
-                      </div>
+                   
+                     <div className="text-sm text-muted-foreground">
+                      Added {new Date(stock.created_at).toLocaleDateString()}
                     </div>
                   </Card>
                 ))}
