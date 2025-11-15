@@ -139,7 +139,7 @@ export default function Profile() {
                   {user?.email}
               </p>
               <div className="text-xs text-muted-foreground">
-                Member since Jan 2024
+                Member since November 2025
               </div>
             </div>
 
