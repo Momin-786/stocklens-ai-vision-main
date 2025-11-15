@@ -55,10 +55,15 @@ export const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
-    if (!hasSeenOnboarding) {
-      setIsOpen(true);
-    }
+      // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
+      if (!hasSeenOnboarding) {
+        setIsOpen(true);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleComplete = () => {

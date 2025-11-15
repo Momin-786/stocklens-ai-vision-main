@@ -16,17 +16,18 @@ import {
   Shield,
   Palette,
   Save,
-  Camera,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import profileAvatar from "@/assets/profile-avatar.jpg";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Profile() {
     const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [priceAlerts, setPriceAlerts] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -76,6 +77,33 @@ export default function Profile() {
     }
   };
 
+ const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+      
+      toast.success("Password updated successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
+    }
+  };
+
   const handleSavePreferences = () => {
     toast.success("Preferences saved!");
   };
@@ -97,14 +125,12 @@ export default function Profile() {
             <div className="text-center">
               <div className="relative inline-block mb-4">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={profileAvatar} alt="Momin" />
+            
                   <AvatarFallback className="bg-gradient-to-br from-secondary to-accent text-3xl font-bold text-white">
                  {profile?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <button className="absolute bottom-0 right-0 p-2 rounded-full bg-secondary text-white hover:bg-secondary/90 transition-colors shadow-lg">
-                  <Camera className="h-4 w-4" />
-                </button>
+               
               </div>
          <h3 className="font-semibold text-lg mb-1">
                 {loading ? "Loading..." : profile?.full_name || "User"}
@@ -202,21 +228,14 @@ export default function Profile() {
 
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="currentPassword">Current Password</Label>
-                      <Input
-                        id="currentPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        className="mt-1.5"
-                      />
-                    </div>
-
-                    <div>
+                    
                       <Label htmlFor="newPassword">New Password</Label>
                       <Input
                         id="newPassword"
                         type="password"
                         placeholder="••••••••"
+                       value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
                         className="mt-1.5"
                       />
                     </div>
@@ -227,11 +246,19 @@ export default function Profile() {
                         id="confirmPassword"
                         type="password"
                         placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                         className="mt-1.5"
                       />
                     </div>
 
-                    <Button variant="outline">Update Password</Button>
+ <Button 
+                      variant="outline"
+                      onClick={handleUpdatePassword}
+                      disabled={!newPassword || !confirmPassword}
+                    >
+                      Update Password
+                    </Button>
                   </div>
                 </Card>
               </TabsContent>

@@ -18,7 +18,22 @@ export const useStockData = (enabled: boolean = true) => {
   ];
 
   const fetchStockData = async () => {
-    if (!enabled) return;
+    if (!enabled) {
+      // Still provide demo data even when disabled
+      const demoStocks = defaultSymbols.map((symbol, index) => ({
+        id: symbol,
+        symbol,
+        name: getStockName(symbol),
+        price: Math.round((150 + Math.random() * 100) * 100) / 100,
+        change: Math.round((Math.random() - 0.5) * 10 * 100) / 100,
+        changePercent: Math.round((Math.random() - 0.5) * 5 * 100) / 100,
+        volume: (Math.floor(Math.random() * 10000000) + 1000000).toLocaleString(),
+        category: getCategory(index)
+      }));
+      setStocks(demoStocks);
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
@@ -75,6 +90,10 @@ export const useStockData = (enabled: boolean = true) => {
         
         setStocks(demoStocks);
         setLastUpdate(new Date());
+         toast({
+          title: "Demo Data Active",
+          description: "Alpha Vantage API rate limit reached (25 calls/day). Showing realistic sample data.",
+        });
     }
       
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
