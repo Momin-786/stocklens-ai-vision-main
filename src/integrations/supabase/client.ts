@@ -34,6 +34,26 @@ if (import.meta.env.DEV) {
   });
 }
 
+// Expose for browser console diagnostics (development only)
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  (window as any).__SUPABASE_DIAGNOSTIC__ = {
+    url: SUPABASE_URL,
+    hasKey: !!SUPABASE_PUBLISHABLE_KEY,
+    keyPreview: SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) + '...',
+    testConnection: async () => {
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
+          headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY || '' }
+        });
+        return { status: response.status, ok: response.ok };
+      } catch (error: any) {
+        return { error: error.message, name: error.name };
+      }
+    }
+  };
+  console.log('💡 Diagnostic tool available: window.__SUPABASE_DIAGNOSTIC__');
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -44,10 +64,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     redirectTo: import.meta.env.VITE_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
     flowType: 'pkce', // Use PKCE flow for better security
+    detectSessionInUrl: true,
   },
   global: {
     headers: {
       'x-client-info': 'stocklens-web',
     },
+    // Removed custom fetch to avoid interference - using default fetch
+    // If timeout is needed, Supabase client handles it internally
   },
 });

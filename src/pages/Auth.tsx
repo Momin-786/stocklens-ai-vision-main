@@ -243,21 +243,27 @@ const Auth = () => {
               variant: "destructive",
               duration: 20000, // Show for 20 seconds
             });
-            console.error("⚠️ CONNECTION RESET ON VERCEL - Configuration Issue (not paused project)", {
+            console.error("⚠️ CONNECTION RESET ON VERCEL - Deep Troubleshooting Needed", {
               supabaseUrl,
               redirectUrl,
               error: error.message,
-              note: "Localhost works, so Supabase project is ACTIVE. This is a Vercel configuration issue.",
-              immediateActions: [
-                "1. Go to Supabase Dashboard: https://app.supabase.com/",
-                "2. Select project: lvmumjsocfvxxxzrdhnq",
-                "3. Go to Authentication → URL Configuration",
-                "4. Set Site URL to: https://stocklens-ai-vision-main.vercel.app",
-                "5. Add to Redirect URLs: https://stocklens-ai-vision-main.vercel.app/**",
-                "6. Go to Vercel → Settings → Environment Variables",
-                "7. Verify VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set for Production",
-                "8. Redeploy on Vercel",
+              note: "Localhost works, so Supabase project is ACTIVE. This is a network-level issue.",
+              possibleCauses: [
+                "1. Supabase Network Restrictions blocking Vercel IPs",
+                "2. Regional routing issue between Vercel and Supabase",
+                "3. Vercel edge network firewall blocking connection",
+                "4. SSL/TLS certificate issue",
+                "5. Supabase project partially paused (check dashboard)",
               ],
+              diagnosticSteps: [
+                "1. Check Supabase Dashboard → Settings → Network Restrictions",
+                "2. Verify no IP allowlist is blocking Vercel",
+                "3. Check Supabase project region matches Vercel region",
+                "4. Test from different network/browser",
+                "5. Check Supabase Dashboard → Logs → API Logs for blocked requests",
+                "6. See DEEP_TROUBLESHOOTING.md for full diagnostic guide",
+              ],
+              testCommand: "Run in browser console: fetch('https://lvmumjsocfvxxxzrdhnq.supabase.co/auth/v1/health', {headers: {apikey: 'YOUR_KEY'}}).then(r => console.log('Status:', r.status)).catch(e => console.error('Error:', e))",
             });
           } else {
             // On localhost, could be paused project
