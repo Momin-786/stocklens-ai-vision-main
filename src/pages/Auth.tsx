@@ -233,27 +233,56 @@ const Auth = () => {
             instructions: "Go to Supabase Dashboard → Authentication → URL Configuration → Set Site URL to: " + redirectUrl,
           });
         } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
-          toast({
-            title: "Connection Error - Project Likely Paused",
-            description: "Your Supabase project is likely paused. Go to https://app.supabase.com/ → Your Project → Settings → General → Resume Project. Wait 2-3 minutes, then try again.",
-            variant: "destructive",
-            duration: 15000, // Show for 15 seconds
-          });
-          console.error("⚠️ CONNECTION RESET DETECTED - Most likely cause: Paused Supabase project", {
-            supabaseUrl,
-            redirectUrl,
-            error: error.message,
-            immediateAction: "Go to https://app.supabase.com/ → Project 'lvmumjsocfvxxxzrdhnq' → Settings → General → Resume Project",
-            waitTime: "Wait 2-3 minutes after resuming for services to restart",
-            troubleshooting: [
-              "1. Open https://app.supabase.com/",
-              "2. Select project: lvmumjsocfvxxxzrdhnq",
-              "3. Go to Settings → General",
-              "4. Look for 'Project Status' - if paused, click 'Resume Project'",
-              "5. Wait 2-3 minutes for all services to restart",
-              "6. Try signing up again",
-            ],
-          });
+          const isVercel = window.location.hostname.includes('vercel.app');
+          
+          if (isVercel) {
+            // On Vercel, connection reset usually means CORS/Site URL issue, not paused project
+            toast({
+              title: "Vercel Configuration Issue",
+              description: "Since localhost works, this is a Vercel config issue. Check: 1) Supabase Dashboard → Authentication → URL Configuration → Set Site URL to your Vercel URL, 2) Verify Vercel environment variables are set correctly.",
+              variant: "destructive",
+              duration: 20000, // Show for 20 seconds
+            });
+            console.error("⚠️ CONNECTION RESET ON VERCEL - Configuration Issue (not paused project)", {
+              supabaseUrl,
+              redirectUrl,
+              error: error.message,
+              note: "Localhost works, so Supabase project is ACTIVE. This is a Vercel configuration issue.",
+              immediateActions: [
+                "1. Go to Supabase Dashboard: https://app.supabase.com/",
+                "2. Select project: lvmumjsocfvxxxzrdhnq",
+                "3. Go to Authentication → URL Configuration",
+                "4. Set Site URL to: https://stocklens-ai-vision-main.vercel.app",
+                "5. Add to Redirect URLs: https://stocklens-ai-vision-main.vercel.app/**",
+                "6. Go to Vercel → Settings → Environment Variables",
+                "7. Verify VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set for Production",
+                "8. Redeploy on Vercel",
+              ],
+            });
+          } else {
+            // On localhost, could be paused project
+            toast({
+              title: "Connection Error - Project Likely Paused",
+              description: "Your Supabase project is likely paused. Go to https://app.supabase.com/ → Your Project → Settings → General → Resume Project. Wait 2-3 minutes, then try again.",
+              variant: "destructive",
+              duration: 15000,
+            });
+            console.error("⚠️ CONNECTION RESET DETECTED - Most likely cause: Paused Supabase project", {
+              supabaseUrl,
+              redirectUrl,
+              error: error.message,
+              immediateAction: "Go to https://app.supabase.com/ → Project 'lvmumjsocfvxxxzrdhnq' → Settings → General → Resume Project",
+              waitTime: "Wait 2-3 minutes after resuming for services to restart",
+              troubleshooting: [
+                "1. Open https://app.supabase.com/",
+                "2. Select project: lvmumjsocfvxxxzrdhnq",
+                "3. Go to Settings → General",
+                "4. Look for 'Project Status' - if paused, click 'Resume Project'",
+                "5. Wait 2-3 minutes for all services to restart",
+                "6. Try signing up again",
+              ],
+            });
+          }
         } else {
           throw error;
         }
@@ -331,22 +360,38 @@ const Auth = () => {
             variant: "destructive",
           });
         } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
-          toast({
-            title: "Connection Error",
-            description: "Unable to connect to Supabase. Your project might be paused. Check Supabase Dashboard and resume if needed.",
-            variant: "destructive",
-          });
-          console.error("Connection error during signin. Possible causes:", {
-            supabaseUrl,
-            error: error.message,
-            troubleshooting: [
-              "1. Check if Supabase project is paused (free tier pauses after inactivity)",
-              "2. Go to Supabase Dashboard → Settings → General",
-              "3. If paused, click 'Resume Project'",
-              "4. Wait 1-2 minutes for project to restart",
-              "5. Try again",
-            ],
-          });
+          const isVercel = window.location.hostname.includes('vercel.app');
+          
+          if (isVercel) {
+            toast({
+              title: "Vercel Configuration Issue",
+              description: "Since localhost works, check: 1) Supabase Site URL configuration, 2) Vercel environment variables are set correctly.",
+              variant: "destructive",
+              duration: 20000,
+            });
+            console.error("⚠️ Connection error on Vercel - Configuration issue", {
+              supabaseUrl,
+              error: error.message,
+              fix: "Check Supabase Site URL and Vercel environment variables",
+            });
+          } else {
+            toast({
+              title: "Connection Error",
+              description: "Unable to connect to Supabase. Your project might be paused. Check Supabase Dashboard and resume if needed.",
+              variant: "destructive",
+            });
+            console.error("Connection error during signin. Possible causes:", {
+              supabaseUrl,
+              error: error.message,
+              troubleshooting: [
+                "1. Check if Supabase project is paused (free tier pauses after inactivity)",
+                "2. Go to Supabase Dashboard → Settings → General",
+                "3. If paused, click 'Resume Project'",
+                "4. Wait 1-2 minutes for project to restart",
+                "5. Try again",
+              ],
+            });
+          }
         } else {
           throw error;
         }
