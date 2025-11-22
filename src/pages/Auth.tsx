@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { TrendingUp } from "lucide-react";
 import { z } from "zod";
+import { checkSupabaseConfig } from "@/utils/supabaseCheck";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -23,10 +24,27 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
 
   useEffect(() => {
+    // Check Supabase configuration on mount
+    const configCheck = checkSupabaseConfig();
+    if (!configCheck.valid) {
+      console.error('Supabase configuration issues detected:', configCheck.issues);
+      // Don't block the UI, but log the issues for debugging
+    }
+
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/stocks");
+      }
+    }).catch((error) => {
+      console.error('Error checking session:', error);
+      // If there's a connection error, show a helpful message
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('network')) {
+        toast({
+          title: "Connection Error",
+          description: "Unable to connect to authentication service. Please check your configuration.",
+          variant: "destructive",
+        });
       }
     });
 
@@ -38,7 +56,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +67,22 @@ const Auth = () => {
       emailSchema.parse(email);
       passwordSchema.parse(password);
 
+      // Check if Supabase is configured
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase is not configured. Please check your environment variables.');
+      }
+
       // Get redirect URL from environment or use current origin
       const redirectUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
       
-      const { error } = await supabase.auth.signUp({
+      console.log('Attempting signup with:', {
+        email,
+        redirectUrl,
+        supabaseUrl: supabaseUrl.substring(0, 30) + '...', // Log partial URL for debugging
+      });
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -63,7 +93,11 @@ const Auth = () => {
         },
       });
 
+      console.log('Signup response:', { data: data?.user ? 'User created' : 'No user', error: error?.message });
+
       if (error) {
+        console.error('Signup error:', error);
+        
         // Handle specific error cases
         if (error.message.includes("already registered") || error.message.includes("already been registered")) {
           toast({
@@ -78,6 +112,27 @@ const Auth = () => {
             variant: "destructive",
           });
           console.error("Supabase redirect URL error. Make sure your Vercel URL is whitelisted in Supabase:", redirectUrl);
+        } else if (error.message.includes("CORS") || error.message.includes("Access-Control-Allow-Origin")) {
+          toast({
+            title: "CORS Configuration Error",
+            description: "Please configure the Site URL in Supabase Dashboard → Authentication → URL Configuration. Set it to: " + redirectUrl,
+            variant: "destructive",
+          });
+          console.error("CORS error detected. Configure Site URL in Supabase Dashboard:", {
+            currentSiteUrl: redirectUrl,
+            instructions: "Go to Supabase Dashboard → Authentication → URL Configuration → Set Site URL to: " + redirectUrl,
+          });
+        } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection")) {
+          toast({
+            title: "Connection Error",
+            description: "Unable to connect to the server. Please check your internet connection and try again.",
+            variant: "destructive",
+          });
+          console.error("Network error. Check:", {
+            supabaseUrl,
+            redirectUrl,
+            error: error.message,
+          });
         } else {
           throw error;
         }
@@ -107,17 +162,42 @@ const Auth = () => {
       emailSchema.parse(email);
       passwordSchema.parse(password);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      // Check if Supabase is configured
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase is not configured. Please check your environment variables.');
+      }
+
+      console.log('Attempting signin with:', {
+        email,
+        supabaseUrl: supabaseUrl.substring(0, 30) + '...',
+      });
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log('Signin response:', { data: data?.user ? 'User signed in' : 'No user', error: error?.message });
+
       if (error) {
+        console.error('Signin error:', error);
+        
         if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Invalid credentials",
             description: "Email or password is incorrect.",
             variant: "destructive",
+          });
+        } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection")) {
+          toast({
+            title: "Connection Error",
+            description: "Unable to connect to the server. Please check your internet connection and try again.",
+            variant: "destructive",
+          });
+          console.error("Network error during signin:", {
+            supabaseUrl,
+            error: error.message,
           });
         } else {
           throw error;

@@ -13,22 +13,27 @@ This happens because Supabase requires redirect URLs to be whitelisted in the au
 
 ## Solution
 
-### Step 1: Configure Supabase Redirect URLs
+### Step 1: Configure Supabase URL Configuration (CRITICAL FOR CORS)
 
 1. Go to your [Supabase Dashboard](https://app.supabase.com/)
 2. Select your project
 3. Navigate to **Authentication** → **URL Configuration**
-4. Under **Redirect URLs**, add your Vercel deployment URLs:
-   - `https://your-app.vercel.app/**`
-   - `https://your-app.vercel.app/*`
-   - `https://your-app.vercel.app/`
+
+4. **MOST IMPORTANT - Set Site URL:**
+   - Under **Site URL**, set it to your production Vercel URL:
+   - `https://stocklens-ai-vision-main.vercel.app`
+   - ⚠️ **This is required for CORS to work!** Without this, you'll get CORS errors.
+
+5. Under **Redirect URLs**, add your Vercel deployment URLs:
+   - `https://stocklens-ai-vision-main.vercel.app/**`
+   - `https://stocklens-ai-vision-main.vercel.app/*`
+   - `https://stocklens-ai-vision-main.vercel.app/`
    
    If you have multiple environments (production, preview), add:
    - `https://*.vercel.app/**` (for preview deployments)
    - Your specific production URL
 
-5. Under **Site URL**, set it to your production Vercel URL:
-   - `https://your-app.vercel.app`
+**Note:** The Site URL is the primary setting that controls CORS. Make sure it matches your Vercel deployment URL exactly.
 
 ### Step 2: Configure Vercel Environment Variables
 
@@ -102,12 +107,86 @@ VITE_SITE_URL=http://localhost:8080
 - **Solution:** Verify your `VITE_SUPABASE_PUBLISHABLE_KEY` is correct in Vercel
 - Make sure you're using the **anon/public** key, not the service role key
 
+### Error: "ERR_CONNECTION_RESET" or "Failed to fetch"
+
+This error indicates the connection to Supabase is being reset. Common causes:
+
+1. **Missing Environment Variables:**
+   - Check Vercel environment variables are set correctly
+   - Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are present
+   - Make sure they're set for the correct environment (Production/Preview)
+
+2. **Incorrect Supabase URL:**
+   - Verify the URL format: `https://your-project.supabase.co`
+   - Make sure there's no trailing slash
+   - Check the URL in Supabase Dashboard → Settings → API
+
+3. **Supabase Project Issues:**
+   - Check if your Supabase project is paused (free tier projects pause after inactivity)
+   - Verify the project is active in Supabase Dashboard
+   - Check if you've exceeded rate limits
+
+4. **Network/Firewall Issues:**
+   - Some networks block connections to Supabase
+   - Try accessing from a different network
+   - Check browser console for detailed error messages
+
+5. **CORS Issues:**
+   - Supabase should handle CORS automatically
+   - If issues persist, check Supabase Dashboard → Settings → API → CORS settings
+
+### Error: "Access to fetch has been blocked by CORS policy"
+
+This is a **critical configuration issue** that must be fixed in Supabase Dashboard:
+
+**Solution - Configure Supabase Site URL:**
+
+1. Go to [Supabase Dashboard](https://app.supabase.com/)
+2. Select your project: `lvmumjsocfvxxxzrdhnq`
+3. Navigate to **Authentication** → **URL Configuration**
+4. **CRITICAL:** Set the **Site URL** to:
+   ```
+   https://stocklens-ai-vision-main.vercel.app
+   ```
+   This is the most important setting for CORS!
+
+5. Under **Redirect URLs**, ensure you have:
+   ```
+   https://stocklens-ai-vision-main.vercel.app/**
+   https://stocklens-ai-vision-main.vercel.app/*
+   https://stocklens-ai-vision-main.vercel.app/
+   ```
+
+6. **Additional CORS Configuration** (if Site URL doesn't fix it):
+   - Go to **Settings** → **API**
+   - Check if there are any CORS restrictions
+   - For most cases, Supabase handles CORS automatically when Site URL is set correctly
+
+**Why this happens:**
+- Supabase uses the Site URL to determine which origins are allowed for CORS
+- If Site URL is not set or is incorrect, Supabase will block requests from your Vercel domain
+- This is a security feature to prevent unauthorized domains from accessing your Supabase project
+
+**Verification:**
+After setting the Site URL:
+1. Wait 1-2 minutes for changes to propagate
+2. Clear your browser cache or use incognito mode
+3. Try signing up again
+4. Check browser console - CORS error should be gone
+
+**Debugging Steps:**
+1. Open browser DevTools → Console
+2. Check for detailed error messages
+3. Verify environment variables in Vercel build logs
+4. Test Supabase connection directly: `https://your-project.supabase.co/rest/v1/` (should return JSON)
+
 ### Authentication works locally but not on Vercel
 
 - **Solution:** 
   1. Check Vercel environment variables are set
   2. Verify the variables are available in the build (check Vercel build logs)
   3. Ensure Supabase Redirect URLs include your Vercel domain
+  4. Make sure environment variables are set for **Production** environment in Vercel
 
 ## Security Notes
 
