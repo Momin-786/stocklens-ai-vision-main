@@ -243,27 +243,39 @@ const Auth = () => {
               variant: "destructive",
               duration: 20000, // Show for 20 seconds
             });
-            console.error("⚠️ CONNECTION RESET ON VERCEL - Deep Troubleshooting Needed", {
+            console.error("⚠️ NETWORK BLOCK DETECTED - Requests Not Reaching Supabase", {
               supabaseUrl,
               redirectUrl,
               error: error.message,
-              note: "Localhost works, so Supabase project is ACTIVE. This is a network-level issue.",
+              diagnosis: "No logs in Supabase + Browser test fails = Network-level block",
+              note: "Localhost works, so Supabase is ACTIVE. Requests are being blocked before reaching Supabase.",
+              immediateTests: [
+                "1. Try from different browser (Chrome, Firefox, Edge)",
+                "2. Try incognito/private mode",
+                "3. Disable browser extensions",
+                "4. Try from different network (mobile hotspot)",
+                "5. Try from different device",
+              ],
+              checkNetworkTab: [
+                "1. Open DevTools → Network tab",
+                "2. Try to sign up",
+                "3. Click failed request → Timing tab",
+                "4. Check where it fails: DNS, Connecting, SSL, etc.",
+              ],
               possibleCauses: [
-                "1. Supabase Network Restrictions blocking Vercel IPs",
-                "2. Regional routing issue between Vercel and Supabase",
-                "3. Vercel edge network firewall blocking connection",
-                "4. SSL/TLS certificate issue",
-                "5. Supabase project partially paused (check dashboard)",
+                "1. Browser security policy blocking connection",
+                "2. Network/firewall on your end blocking Supabase",
+                "3. Browser extension blocking requests",
+                "4. Corporate firewall/proxy",
+                "5. Regional routing issue",
               ],
-              diagnosticSteps: [
-                "1. Check Supabase Dashboard → Settings → Network Restrictions",
-                "2. Verify no IP allowlist is blocking Vercel",
-                "3. Check Supabase project region matches Vercel region",
-                "4. Test from different network/browser",
-                "5. Check Supabase Dashboard → Logs → API Logs for blocked requests",
-                "6. See DEEP_TROUBLESHOOTING.md for full diagnostic guide",
+              solutions: [
+                "1. Test from different browser/network (most likely fix)",
+                "2. Check browser extensions",
+                "3. Check network firewall settings",
+                "4. See NETWORK_BLOCK_SOLUTION.md for full guide",
+                "5. Contact Supabase/Vercel support if persists",
               ],
-              testCommand: "Run in browser console: fetch('https://lvmumjsocfvxxxzrdhnq.supabase.co/auth/v1/health', {headers: {apikey: 'YOUR_KEY'}}).then(r => console.log('Status:', r.status)).catch(e => console.error('Error:', e))",
             });
           } else {
             // On localhost, could be paused project
