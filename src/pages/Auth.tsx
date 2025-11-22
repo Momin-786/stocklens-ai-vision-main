@@ -32,17 +32,30 @@ const Auth = () => {
     }
 
     // Test connection on mount (non-blocking)
+    // Only show warnings for actual issues, not Vercel CORS false positives
     const testConnection = async () => {
       const { testSupabaseConnection } = await import('@/utils/supabaseCheck');
       const result = await testSupabaseConnection();
       
-      if (!result.connected && result.isPaused) {
-        console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
+      // Only show warning if it's a real issue (not skipped or Vercel CORS)
+      if (!result.connected && !result.skipped && !result.isVercelIssue) {
+        if (result.isPaused) {
+          console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
+          toast({
+            title: "Supabase Connection Issue",
+            description: result.suggestion || "Your Supabase project might be paused. Check the dashboard.",
+            variant: "destructive",
+            duration: 10000,
+          });
+        }
+      } else if (result.isVercelIssue) {
+        // Vercel-specific issue - show helpful message
+        console.warn('⚠️ Vercel connection issue detected:', result);
         toast({
-          title: "Supabase Connection Issue",
-          description: result.suggestion || "Your Supabase project might be paused. Check the dashboard.",
+          title: "Vercel Configuration Needed",
+          description: result.suggestion || "Check Supabase Site URL and Vercel environment variables.",
           variant: "destructive",
-          duration: 10000, // Show for 10 seconds
+          duration: 15000,
         });
       }
     };
