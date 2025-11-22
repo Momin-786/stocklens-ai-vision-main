@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Command,
   CommandEmpty,
@@ -13,8 +13,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const INTERNATIONAL_STOCKS = [
   { symbol: "AAPL", name: "Apple Inc." },
@@ -62,17 +64,95 @@ interface StockSelectorProps {
   onValueChange: (value: string) => void;
 }
 
+interface SearchResult {
+  symbol: string;
+  description: string;
+  displaySymbol: string;
+  type: string;
+}
+
 export function StockSelector({ value, onValueChange }: StockSelectorProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDefaultStocks, setShowDefaultStocks] = useState(true);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Search for stocks using API
+  const searchStocks = useCallback(async (query: string) => {
+    if (!query || query.length < 1) {
+      setSearchResults([]);
+      setShowDefaultStocks(true);
+      return;
+    }
+
+    setIsSearching(true);
+    setShowDefaultStocks(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
+        body: { 
+          search: query,
+          limit: 30 // Show more results in selector
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.searchResults && Array.isArray(data.searchResults)) {
+        setSearchResults(data.searchResults);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error: any) {
+      console.error('Error searching stocks:', error);
+      setSearchResults([]);
+      // Don't show toast for every search error to avoid spam
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchQuery.trim()) {
+      searchTimeoutRef.current = setTimeout(() => {
+        searchStocks(searchQuery.trim());
+      }, 500);
+    } else {
+      setSearchResults([]);
+      setShowDefaultStocks(true);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, searchStocks]);
+
+  // Find selected stock from default list or search results
+  const selectedStock = [...INTERNATIONAL_STOCKS, ...PAKISTAN_STOCKS].find(
+    (stock) => stock.symbol === value
+  ) || searchResults.find((stock) => stock.symbol === value);
 
   const allStocks = [
     { label: "International Stocks", stocks: INTERNATIONAL_STOCKS },
     { label: "Pakistan Stocks", stocks: PAKISTAN_STOCKS },
   ];
 
-  const selectedStock = [...INTERNATIONAL_STOCKS, ...PAKISTAN_STOCKS].find(
-    (stock) => stock.symbol === value
-  );
+  // Reset search when popover closes
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery("");
+      setSearchResults([]);
+      setShowDefaultStocks(true);
+    }
+  }, [open]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -85,8 +165,10 @@ export function StockSelector({ value, onValueChange }: StockSelectorProps) {
         >
           {selectedStock ? (
             <span className="truncate">
-              {selectedStock.symbol} - {selectedStock.name}
+              {selectedStock.symbol} - {('name' in selectedStock ? selectedStock.name : selectedStock.description)}
             </span>
+          ) : value ? (
+            <span className="truncate">{value}</span>
           ) : (
             "Select stock..."
           )}
@@ -94,19 +176,78 @@ export function StockSelector({ value, onValueChange }: StockSelectorProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0">
-        <Command>
-          <CommandInput placeholder="Search stocks..." />
+        <Command shouldFilter={false}>
+          <div className="relative">
+            <CommandInput 
+              placeholder="Search any stock symbol or company name..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            {isSearching && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+            {searchQuery && !isSearching && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                  setShowDefaultStocks(true);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <CommandList>
-            <CommandEmpty>No stock found.</CommandEmpty>
-            {allStocks.map((group) => (
-              <CommandGroup key={group.label} heading={group.label}>
-                {group.stocks.map((stock) => (
+            {isSearching ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
+              </div>
+            ) : showDefaultStocks && !searchQuery ? (
+              <>
+                {allStocks.map((group) => (
+                  <CommandGroup key={group.label} heading={group.label}>
+                    {group.stocks.map((stock) => (
+                      <CommandItem
+                        key={stock.symbol}
+                        value={`${stock.symbol} ${stock.name}`}
+                        onSelect={() => {
+                          onValueChange(stock.symbol);
+                          setOpen(false);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            value === stock.symbol ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-semibold">{stock.symbol}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {stock.name}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ))}
+              </>
+            ) : searchResults.length > 0 ? (
+              <CommandGroup heading={`Search Results (${searchResults.length})`}>
+                {searchResults.map((stock) => (
                   <CommandItem
                     key={stock.symbol}
-                    value={`${stock.symbol} ${stock.name}`}
+                    value={`${stock.symbol} ${stock.description}`}
                     onSelect={() => {
                       onValueChange(stock.symbol);
                       setOpen(false);
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setShowDefaultStocks(true);
                     }}
                   >
                     <Check
@@ -115,16 +256,25 @@ export function StockSelector({ value, onValueChange }: StockSelectorProps) {
                         value === stock.symbol ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{stock.symbol}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {stock.name}
+                    <div className="flex flex-col flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">{stock.symbol}</span>
+                        <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
+                          {stock.type}
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {stock.description}
                       </span>
                     </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
-            ))}
+            ) : (
+              <CommandEmpty>
+                {searchQuery ? `No stocks found for "${searchQuery}"` : "No stock found."}
+              </CommandEmpty>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

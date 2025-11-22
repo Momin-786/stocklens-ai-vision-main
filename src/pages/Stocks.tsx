@@ -1,4 +1,5 @@
-import { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,17 +14,34 @@ import {
   List,
   Filter,
   RefreshCw,
+  X,
+  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePracticeMode } from "@/contexts/PracticeModeContext";
 import { useStockData } from "@/hooks/useStockData";
 import { useRealtimeUpdates } from "@/hooks/useRealtimeUpdates";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface SearchResult {
+  symbol: string;
+  description: string;
+  displaySymbol: string;
+  type: string;
+}
 
 export default function Stocks() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
   const [riskLevel, setRiskLevel] = useState([50]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchedStocks, setSearchedStocks] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const { isPracticeMode } = usePracticeMode();
 
   const categories = ["All", "technology", "finance", "energy", "healthcare", "consumer"];
@@ -35,14 +53,132 @@ export default function Stocks() {
   // Use simulated updates in practice mode
   const { data: practiceStocks, lastUpdate: practiceLastUpdate } = useRealtimeUpdates(realStocks, isPracticeMode);
   
-  // Use appropriate data based on mode
-  const stocks = isPracticeMode ? practiceStocks : realStocks;
+  // Use appropriate data based on mode and search
+  const baseStocks = isPracticeMode ? practiceStocks : realStocks;
   const lastUpdate = isPracticeMode ? practiceLastUpdate : realLastUpdate;
+  
+  // Show searched stocks if search is active, otherwise show default stocks
+  const stocks = searchQuery && searchedStocks.length > 0 ? searchedStocks : baseStocks;
 
   const toggleStock = (id: string) => {
     setSelectedStocks((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
+  };
+
+  // Search for stocks using Finnhub API
+  const searchStocks = useCallback(async (query: string) => {
+    if (!query || query.length < 1) {
+      setSearchResults([]);
+      setSearchedStocks([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // Call Finnhub search API via edge function
+      const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
+        body: { 
+          search: query,
+          limit: 20 // Limit results to avoid too many API calls
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.searchResults && Array.isArray(data.searchResults)) {
+        setSearchResults(data.searchResults);
+        setShowSearchResults(true);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    } catch (error: any) {
+      console.error('Error searching stocks:', error);
+      toast.error('Failed to search stocks. Please try again.');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Fetch data for selected search result
+  const fetchSearchedStockData = async (result: SearchResult) => {
+    try {
+      setIsSearching(true);
+      const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
+        body: { symbols: [result.symbol] }
+      });
+
+      if (error) throw error;
+
+      if (data?.stocks && data.stocks.length > 0) {
+        const stock = data.stocks[0];
+        const newStock = {
+          id: stock.symbol,
+          symbol: stock.symbol,
+          name: result.description || stock.name || result.symbol,
+          price: stock.price,
+          change: stock.change,
+          changePercent: stock.changePercent,
+          volume: stock.volume,
+          category: "finance" // Default category
+        };
+
+        setSearchedStocks([newStock]);
+        setSearchQuery(result.symbol);
+        setShowSearchResults(false);
+        toast.success(`Loaded data for ${result.symbol}`);
+      } else {
+        toast.error(`No data available for ${result.symbol}`);
+      }
+    } catch (error: any) {
+      console.error('Error fetching stock data:', error);
+      toast.error(`Failed to fetch data for ${result.symbol}`);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchStocks(searchQuery.trim());
+      } else {
+        setSearchResults([]);
+        setSearchedStocks([]);
+        setShowSearchResults(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchStocks]);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleSearchResultClick = (result: SearchResult) => {
+    fetchSearchedStockData(result);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchedStocks([]);
+    setShowSearchResults(false);
   };
 
   const filteredStocks =
@@ -63,7 +199,9 @@ export default function Stocks() {
               <p className="text-muted-foreground">
                 {isPracticeMode 
                   ? "Practice mode - Simulated data updates" 
-                  : "Live stock data (showing 7 stocks to optimize API usage)"}
+                  : searchQuery && searchedStocks.length > 0
+                  ? `Showing search results for "${searchQuery}"`
+                  : "Live stock data - Search for any stock symbol or company name"}
               </p>
             </div>
             <div className="flex gap-2 items-center">
@@ -187,12 +325,68 @@ export default function Stocks() {
           <main className="lg:col-span-3 space-y-6">
             {/* Search & View Controls */}
             <div className="flex flex-col sm:flex-row gap-4 animate-slide-up">
-              <div className="relative flex-1">
+              <div className="relative flex-1" ref={searchRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search company name or symbol..."
-                  className="pl-10"
+                  placeholder="Search company name or symbol (e.g., AAPL, Apple)..."
+                  className="pl-10 pr-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => {
+                    if (searchResults.length > 0) {
+                      setShowSearchResults(true);
+                    }
+                  }}
                 />
+                {searchQuery && (
+                  <button
+                    onClick={clearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                {isSearching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                )}
+                
+                {/* Search Results Dropdown */}
+                {showSearchResults && searchResults.length > 0 && (
+                  <Card className="absolute top-full left-0 right-0 mt-2 z-50 max-h-96 overflow-y-auto">
+                    <div className="p-2 space-y-1">
+                      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-b">
+                        Search Results ({searchResults.length})
+                      </div>
+                      {searchResults.map((result, index) => (
+                        <button
+                          key={`${result.symbol}-${index}`}
+                          onClick={() => handleSearchResultClick(result)}
+                          className="w-full text-left px-3 py-2 hover:bg-muted rounded-md transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold">{result.symbol}</div>
+                              <div className="text-sm text-muted-foreground truncate">
+                                {result.description}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {result.type}
+                            </Badge>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+                
+                {showSearchResults && searchQuery && searchResults.length === 0 && !isSearching && (
+                  <Card className="absolute top-full left-0 right-0 mt-2 z-50 p-4">
+                    <p className="text-sm text-muted-foreground text-center">
+                      No stocks found for "{searchQuery}"
+                    </p>
+                  </Card>
+                )}
               </div>
               
               <div className="flex gap-2">

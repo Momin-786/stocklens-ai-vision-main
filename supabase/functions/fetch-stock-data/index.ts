@@ -6,29 +6,73 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req: { method: string; json: () => PromiseLike<{ symbols: any; }> | { symbols: any; }; }) => {
+serve(async (req: { method: string; json: () => PromiseLike<{ symbols?: any; search?: string; limit?: number; }> | { symbols?: any; search?: string; limit?: number; }; }) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { symbols } = await req.json();
+    const requestBody = await req.json();
+    const { symbols, search, limit = 20 } = requestBody;
     // @ts-expect-error: Deno global is available in Supabase Edge Functions
     const apiKey = Deno.env.get('FINNHUB_API_KEY');
 
-    console.log(`Received request for ${symbols?.length || 0} symbols`);
-    
     if (!apiKey) {
       console.error('FINNHUB_API_KEY not found in environment');
       throw new Error('Finnhub API key not configured');
     }
 
+    // Handle search request FIRST (before checking for symbols)
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+      console.log(`Searching for: ${search}`);
+      
+      const searchUrl = `https://finnhub.io/api/v1/search?q=${encodeURIComponent(search.trim())}&token=${apiKey}`;
+      const searchResponse = await fetch(searchUrl);
+      
+      if (!searchResponse.ok) {
+        const errorText = await searchResponse.text();
+        console.error('Search API error:', searchResponse.status, errorText);
+        throw new Error(`Search API error: ${searchResponse.status}`);
+      }
+      
+      const searchData = await searchResponse.json();
+
+      // Filter and format results
+      const results = (searchData.result || [])
+        .slice(0, limit)
+        .map((item: any) => ({
+          symbol: item.symbol,
+          description: item.description || '',
+          displaySymbol: item.displaySymbol || item.symbol,
+          type: item.type || 'stock'
+        }))
+        .filter((item: any) => 
+          item.type === 'Common Stock' || 
+          item.type === 'stock' ||
+          item.type === 'Equity'
+        );
+
+      console.log(`Found ${results.length} search results`);
+
+      return new Response(
+        JSON.stringify({ searchResults: results }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
+    }
+
+    // Handle symbol data fetch
+    console.log(`Received request for ${symbols?.length || 0} symbols`);
+    
     if (!symbols || !Array.isArray(symbols)) {
       console.error('Invalid symbols parameter:', symbols);
-      throw new Error('Symbols array is required');
+      throw new Error('Either "search" query or "symbols" array is required');
     }
-     console.log(`Fetching data for symbols: ${symbols.join(', ')}`);
+    
+    console.log(`Fetching data for symbols: ${symbols.join(', ')}`);
 
     // Fetch data for each symbol from Finnhub
     const stockData = await Promise.all(

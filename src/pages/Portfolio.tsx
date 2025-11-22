@@ -42,6 +42,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Download,
+  RefreshCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PortfolioComparison } from "@/components/PortfolioComparison";
@@ -49,6 +50,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePracticeMode } from "@/contexts/PracticeModeContext";
 import { generatePortfolioReport } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const holdingFormSchema = z.object({
   symbol: z.string().min(1, "Symbol is required").max(10, "Symbol too long").toUpperCase(),
@@ -69,6 +71,8 @@ export default function Portfolio() {
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [showAddWatchlist, setShowAddWatchlist] = useState(false);
   const [activeTab, setActiveTab] = useState("holdings");
+  const [stockPrices, setStockPrices] = useState<Record<string, { price: number; change: number; changePercent: number }>>({});
+  const [loadingPrices, setLoadingPrices] = useState(false);
   const { isPracticeMode } = usePracticeMode();
   
   useNotifications({ enabled: true, interval: 30000 });
@@ -113,6 +117,58 @@ export default function Portfolio() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fetch real stock prices for portfolio holdings
+  useEffect(() => {
+    const fetchStockPrices = async () => {
+      if (isPracticeMode || userHoldings.length === 0) {
+        // In practice mode or no holdings, use simulated prices
+        return;
+      }
+
+      setLoadingPrices(true);
+      try {
+        // Get unique symbols from holdings
+        const symbols = [...new Set(userHoldings.map(h => h.symbol))];
+        
+        if (symbols.length === 0) {
+          setLoadingPrices(false);
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
+          body: { symbols }
+        });
+
+        if (error) throw error;
+
+        if (data?.stocks && Array.isArray(data.stocks)) {
+          const pricesMap: Record<string, { price: number; change: number; changePercent: number }> = {};
+          
+          data.stocks.forEach((stock: any) => {
+            pricesMap[stock.symbol] = {
+              price: stock.price,
+              change: stock.change,
+              changePercent: stock.changePercent
+            };
+          });
+
+          setStockPrices(pricesMap);
+        }
+      } catch (error: any) {
+        console.error('Error fetching stock prices:', error);
+        // Don't show error toast, just use fallback prices
+      } finally {
+        setLoadingPrices(false);
+      }
+    };
+
+    fetchStockPrices();
+
+    // Refresh prices every 5 minutes
+    const interval = setInterval(fetchStockPrices, 300000);
+    return () => clearInterval(interval);
+  }, [userHoldings, isPracticeMode]);
+
   const handleDownloadReport = () => {
     generatePortfolioReport({
       totalValue,
@@ -137,15 +193,37 @@ export default function Portfolio() {
     return "Good Evening";
   };
 
-  // Calculate portfolio metrics
-  const holdings = userHoldings.map(h => ({
-    ...h,
-    avgPrice: h.avg_price,
-    currentPrice: h.avg_price * (1 + (Math.random() - 0.5) * 0.1), // Demo: simulate price changes
-    value: h.shares * h.avg_price * (1 + (Math.random() - 0.5) * 0.1),
-    gain: h.shares * h.avg_price * ((Math.random() - 0.5) * 0.1),
-    gainPercent: ((Math.random() - 0.5) * 10)
-  }));
+  // Calculate portfolio metrics with real or simulated prices
+  const holdings = userHoldings.map(h => {
+    // Use real price if available, otherwise use simulated (for practice mode or if API fails)
+    const priceData = stockPrices[h.symbol];
+    const currentPrice = priceData 
+      ? priceData.price 
+      : isPracticeMode 
+        ? h.avg_price * (1 + (Math.random() - 0.5) * 0.1) // Simulated for practice mode
+        : h.avg_price; // Fallback to avg price if real price not available
+    
+    const changePercent = priceData 
+      ? priceData.changePercent 
+      : isPracticeMode 
+        ? (Math.random() - 0.5) * 10 
+        : 0;
+    
+    const value = h.shares * currentPrice;
+    const totalCost = h.shares * h.avg_price;
+    const gain = value - totalCost;
+    const gainPercentValue = totalCost > 0 ? ((gain / totalCost) * 100) : 0;
+
+    return {
+      ...h,
+      avgPrice: h.avg_price,
+      currentPrice,
+      value,
+      gain,
+      gainPercent: gainPercentValue,
+      changePercent // For display purposes
+    };
+  });
 
   const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
   const totalGain = holdings.reduce((sum, h) => sum + h.gain, 0);
@@ -291,6 +369,12 @@ export default function Portfolio() {
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-secondary" />
                   <h3 className="text-xl font-semibold">Your Holdings</h3>
+                  {loadingPrices && !isPracticeMode && (
+                    <Badge variant="outline" className="text-xs">
+                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                      Updating prices...
+                    </Badge>
+                  )}
                 </div>
                 <Button 
                   className="bg-secondary hover:bg-secondary/90"
