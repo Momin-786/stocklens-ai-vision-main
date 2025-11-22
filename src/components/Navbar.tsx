@@ -39,26 +39,36 @@ export const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 shadow-sm">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2 hover-scale">
-          <TrendingUp className="h-6 w-6 text-secondary" />
-          <span className="text-xl font-heading font-bold">StockLens</span>
+        <Link to={user ? "/stocks" : "/"} className="flex items-center gap-2 hover-scale group">
+          <div className="p-1.5 rounded-lg bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+            <TrendingUp className="h-5 w-5 text-secondary" />
+          </div>
+          <span className="text-xl font-heading font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            StockLens
+          </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-6">
-          <Link
-            to="/"
-            className={`text-sm font-medium transition-colors hover:text-secondary ${
-              isActive("/") ? "text-secondary" : "text-muted-foreground"
-            }`}
-          >
-            Home
-          </Link>
+        <div className="hidden md:flex items-center gap-1">
+          {!user && (
+            <Link
+              to="/"
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                isActive("/") 
+                  ? "text-secondary bg-secondary/10" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              Home
+            </Link>
+          )}
           <Link
             to="/stocks"
-            className={`text-sm font-medium transition-colors hover:text-secondary ${
-              isActive("/stocks") ? "text-secondary" : "text-muted-foreground"
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive("/stocks") 
+                ? "text-secondary bg-secondary/10" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Stocks
@@ -73,53 +83,66 @@ export const Navbar = () => {
           </Link> */}
           <Link
            to="/comparison"
-            className={`text-sm font-medium transition-colors hover:text-secondary ${
-              isActive("/comparison") ? "text-secondary" : "text-muted-foreground"
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive("/comparison") 
+                ? "text-secondary bg-secondary/10" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Compare
           </Link>
           <Link
             to="/analysis"
-            className={`text-sm font-medium transition-colors hover:text-secondary ${
-              isActive("/analysis") ? "text-secondary" : "text-muted-foreground"
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive("/analysis") 
+                ? "text-secondary bg-secondary/10" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Analysis
           </Link>
           <Link
             to="/portfolio"
-            className={`text-sm font-medium transition-colors hover:text-secondary ${
-              isActive("/portfolio") ? "text-secondary" : "text-muted-foreground"
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive("/portfolio") 
+                ? "text-secondary bg-secondary/10" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Portfolio
           </Link>
           <Link
             to="/profile"
-            className={`text-sm font-medium transition-colors hover:text-secondary ${
-              isActive("/profile") ? "text-secondary" : "text-muted-foreground"
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              isActive("/profile") 
+                ? "text-secondary bg-secondary/10" 
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Profile
           </Link>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             variant={isPracticeMode ? "default" : "outline"}
             size="sm"
             onClick={togglePracticeMode}
-            className={`hidden md:inline-flex gap-2 ${isPracticeMode ? "bg-accent hover:bg-accent/90" : ""}`}
+            className={`hidden md:inline-flex gap-2 transition-all ${
+              isPracticeMode 
+                ? "bg-accent hover:bg-accent/90 shadow-sm" 
+                : "hover:bg-muted/50"
+            }`}
           >
             <FlaskConical className="h-4 w-4" />
-            {isPracticeMode && <Badge variant="secondary" className="px-1 py-0 text-xs">Practice</Badge>}
+            {isPracticeMode && <Badge variant="secondary" className="px-1.5 py-0 text-xs">Practice</Badge>}
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
             aria-label="Toggle theme"
+            className="hover:bg-muted/50"
           >
             {theme === "light" ? (
               <Moon className="h-5 w-5" />
@@ -132,24 +155,24 @@ export const Navbar = () => {
               variant="outline"
               size="sm"
               onClick={signOut}
-              className="gap-2"
+              className="gap-2 hover:bg-muted/50 border-2"
             >
               <LogOut className="h-4 w-4" />
-              Sign Out
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           ) : (
             <>
               <Button
                 variant="outline"
                 size="sm"
-                className="hidden sm:inline-flex"
+                className="hidden sm:inline-flex border-2 hover:bg-muted/50"
                 onClick={() => navigate("/auth")}
               >
                 Login
               </Button>
               <Button
                 size="sm"
-                className="bg-secondary hover:bg-secondary/90"
+                className="bg-secondary hover:bg-secondary/90 shadow-sm"
                 onClick={() => navigate("/auth")}
               >
                 Sign Up

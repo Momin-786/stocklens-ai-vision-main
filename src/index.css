@@ -111,4 +111,12 @@ All colors MUST be HSL.
   .text-gradient {
     @apply bg-gradient-to-r from-secondary to-accent bg-clip-text text-transparent;
   }
+
+  .glass-effect {
+    @apply bg-card/50 backdrop-blur-md border border-border/50;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:scale-[1.02];
+  }
 }

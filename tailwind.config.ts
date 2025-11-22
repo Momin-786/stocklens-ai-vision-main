@@ -93,6 +93,14 @@ export default {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-10px)" },
         },
+        "gradient": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        "draw": {
+          "0%": { strokeDasharray: "1000", strokeDashoffset: "1000" },
+          "100%": { strokeDasharray: "1000", strokeDashoffset: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.3s ease-out",
@@ -101,6 +109,8 @@ export default {
         "slide-up": "slide-up 0.6s ease-out",
         "scale-in": "scale-in 0.4s ease-out",
         "float": "float 6s ease-in-out infinite",
+        "gradient": "gradient 3s ease infinite",
+        "draw": "draw 2s ease-out forwards",
       },
     },
   },
