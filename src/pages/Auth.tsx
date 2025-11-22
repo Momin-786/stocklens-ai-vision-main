@@ -49,11 +49,14 @@ const Auth = () => {
       emailSchema.parse(email);
       passwordSchema.parse(password);
 
+      // Get redirect URL from environment or use current origin
+      const redirectUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${redirectUrl}/`,
           data: {
             full_name: fullName,
           },
@@ -61,12 +64,20 @@ const Auth = () => {
       });
 
       if (error) {
-        if (error.message.includes("already registered")) {
+        // Handle specific error cases
+        if (error.message.includes("already registered") || error.message.includes("already been registered")) {
           toast({
             title: "Account exists",
             description: "This email is already registered. Please sign in instead.",
             variant: "destructive",
           });
+        } else if (error.message.includes("redirect_to") || error.message.includes("redirect URL")) {
+          toast({
+            title: "Configuration Error",
+            description: "Please contact support. The redirect URL needs to be configured.",
+            variant: "destructive",
+          });
+          console.error("Supabase redirect URL error. Make sure your Vercel URL is whitelisted in Supabase:", redirectUrl);
         } else {
           throw error;
         }

@@ -84,11 +84,29 @@ $ cd stocklens
 # Install dependencies
 $ npm install
 
-# Run the app
-$ npm start
+# Set up environment variables
+# Copy .env.example to .env.local and fill in your Supabase credentials
+$ cp .env.example .env.local
 
-# The app will open at http://localhost:3000
-````
+# Run the app
+$ npm run dev
+
+# The app will open at http://localhost:8080
+```
+
+#### Environment Variables
+
+Create a `.env.local` file in the root directory with:
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key-here
+VITE_SITE_URL=http://localhost:8080
+```
+
+#### Deploying to Vercel
+
+See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed deployment instructions, including how to fix Supabase authentication errors.
 
 ---
 

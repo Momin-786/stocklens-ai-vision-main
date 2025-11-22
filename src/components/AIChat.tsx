@@ -7,6 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { MessageSquare, X, Send, Sparkles, Mic, MicOff, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -58,9 +60,19 @@ export const AIChat = () => {
       timestamp: new Date(),
     };
 
+    const userInput = input;
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsTyping(true);
+
+    // Create placeholder for assistant response
+    const assistantMessage: Message = {
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, assistantMessage]);
+    const messageIndex = messages.length + 1;
 
     try {
       // Prepare conversation history for context
@@ -69,32 +81,66 @@ export const AIChat = () => {
         content: msg.content
       }));
 
-      const { data, error } = await supabase.functions.invoke('stock-chat', {
-        body: {
-          message: input,
-          conversationHistory
-        }
-      });
-
-      if (error) throw error;
-
-      const aiResponse: Message = {
-        role: "assistant",
-        content: data.message || "I apologize, but I couldn't generate a response. Please try again.",
-        timestamp: new Date(),
-      };
+      // Try streaming first, fallback to regular if not supported
+      const useStreaming = false; // Set to true when streaming is fully tested
       
-      setMessages((prev) => [...prev, aiResponse]);
+      if (useStreaming) {
+        // Streaming implementation would go here
+        // For now, use regular non-streaming approach
+        const { data, error } = await supabase.functions.invoke('stock-chat', {
+          body: {
+            message: userInput,
+            conversationHistory,
+            stream: false
+          }
+        });
+
+        if (error) throw error;
+
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[messageIndex] = {
+            role: "assistant",
+            content: data.message || "I apologize, but I couldn't generate a response. Please try again.",
+            timestamp: new Date(),
+          };
+          return updated;
+        });
+      } else {
+        // Regular non-streaming approach
+        const { data, error } = await supabase.functions.invoke('stock-chat', {
+          body: {
+            message: userInput,
+            conversationHistory,
+            stream: false
+          }
+        });
+
+        if (error) throw error;
+
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[messageIndex] = {
+            role: "assistant",
+            content: data.message || "I apologize, but I couldn't generate a response. Please try again.",
+            timestamp: new Date(),
+          };
+          return updated;
+        });
+      }
     } catch (error) {
       console.error('Error in AI chat:', error);
       toast.error('Failed to get AI response');
       
-      const errorResponse: Message = {
-        role: "assistant",
-        content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorResponse]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[messageIndex] = {
+          role: "assistant",
+          content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+          timestamp: new Date(),
+        };
+        return updated;
+      });
     } finally {
       setIsTyping(false);
     }
@@ -288,7 +334,15 @@ export const AIChat = () => {
                         : "bg-muted"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-line">{message.content}</p>
+                    {message.role === "assistant" ? (
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-headings:mt-2 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:font-semibold prose-code:text-xs prose-code:bg-muted-foreground/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {message.content || ""}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-pre-line">{message.content}</p>
+                    )}
                     <p className="text-xs opacity-60 mt-1">
                       {message.timestamp.toLocaleTimeString([], {
                         hour: "2-digit",
