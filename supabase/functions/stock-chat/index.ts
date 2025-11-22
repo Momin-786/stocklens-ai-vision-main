@@ -12,10 +12,10 @@ serve(async (req) => {
 
   try {
     const { message, conversationHistory } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY is not configured');
+    if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is not configured');
       return new Response(
         JSON.stringify({ error: 'AI service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -41,17 +41,28 @@ Keep responses focused and under 200 words unless detailed analysis is requested
       { role: 'user', content: message }
     ];
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: messages,
-      }),
-    });
+    // Convert chat-style messages into Gemini contents format
+    const contents = messages.map((m: { role: string; content: string }) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + GEMINI_API_KEY,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -75,7 +86,8 @@ Keep responses focused and under 200 words unless detailed analysis is requested
     }
 
     const data = await response.json();
-    const aiMessage = data.choices[0].message.content;
+    const aiMessage =
+      data.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || '';
     
     console.log('AI chat response generated successfully');
 

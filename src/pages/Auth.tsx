@@ -73,7 +73,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Account created!",
-          description: "Welcome to Stock Screener. You're now logged in.",
+          description: "Go to gmail and verify your email to proceed.",
         });
       }
     } catch (error: any) {

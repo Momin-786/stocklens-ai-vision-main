@@ -27,22 +27,41 @@ export const usePortfolio = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const queryPromise = supabase
         .from('portfolio_holdings')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      if (error) {
+        // Check if table doesn't exist (common after deployment)
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.warn('portfolio_holdings table does not exist. Please run migrations.');
+          setHoldings([]);
+          return;
+        }
+        throw error;
+      }
       
       setHoldings(data || []);
     } catch (error: any) {
       console.error('Error fetching holdings:', error);
-      toast({
-        title: "Failed to load portfolio",
-        description: error.message,
-        variant: "destructive"
-      });
+      // Only show toast for actual errors, not timeouts or missing tables
+      if (error.message !== 'Request timeout' && !error.message?.includes('does not exist')) {
+        toast({
+          title: "Failed to load portfolio",
+          description: error.message || 'Network error. Please check your connection.',
+          variant: "destructive"
+        });
+      }
+      setHoldings([]);
     } finally {
       setLoading(false);
     }
@@ -52,17 +71,34 @@ export const usePortfolio = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const queryPromise = supabase
         .from('watchlist')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      if (error) {
+        // Check if table doesn't exist (common after deployment)
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.warn('watchlist table does not exist. Please run migrations.');
+          setWatchlist([]);
+          return;
+        }
+        throw error;
+      }
       
       setWatchlist(data || []);
     } catch (error: any) {
       console.error('Error fetching watchlist:', error);
+      // Silently handle errors to avoid spam - set empty array
+      setWatchlist([]);
     }
   };
 
@@ -176,8 +212,17 @@ export const usePortfolio = () => {
 
   useEffect(() => {
     if (user) {
-      fetchHoldings();
-      fetchWatchlist();
+      // Add a small delay to avoid race conditions
+      const timer = setTimeout(() => {
+        fetchHoldings();
+        fetchWatchlist();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setHoldings([]);
+      setWatchlist([]);
+      setLoading(false);
     }
   }, [user]);
 

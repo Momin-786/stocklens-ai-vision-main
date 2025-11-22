@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -493,7 +494,7 @@ export default function Analysis() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mb-4">
-                {loadingPrediction ? "Analyzing..." : `Powered by ${aiInsights?.modelUsed || 'Lovable AI'}`}
+                {loadingPrediction ? "Analyzing..." : `Powered by ${aiInsights?.modelUsed || 'Gemini'}`}
               </p>
 
               {loadingPrediction ? (

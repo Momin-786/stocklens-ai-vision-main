@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, X, Send, Sparkles, Mic, MicOff } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { MessageSquare, X, Send, Sparkles, Mic, MicOff, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 interface Message {
@@ -23,16 +24,28 @@ export const AIChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Cleanup recording timer on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
 
  
 
@@ -100,6 +113,7 @@ export const AIChat = () => {
       const recorder = new MediaRecorder(stream);
       
       audioChunksRef.current = [];
+      setRecordingTime(0);
       
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -109,13 +123,26 @@ export const AIChat = () => {
 
       recorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        await transcribeAudio(audioBlob);
         stream.getTracks().forEach(track => track.stop());
+        
+        // Stop timer
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+        
+        await transcribeAudio(audioBlob);
       };
 
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
+      
+      // Start recording timer
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+      
       toast.success("Recording started - speak now");
     } catch (error) {
       console.error('Error accessing microphone:', error);
@@ -127,33 +154,76 @@ export const AIChat = () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
       setIsRecording(false);
-      toast.info("Processing your voice...");
+      setIsTranscribing(true);
     }
   };
 
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
+      setIsTranscribing(true);
+      
+      // Check audio size (AssemblyAI has limits)
+      const maxSize = 25 * 1024 * 1024; // 25MB limit
+      if (audioBlob.size > maxSize) {
+        toast.error('Audio file is too large. Please record a shorter clip.');
+        setIsTranscribing(false);
+        return;
+      }
+
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       
       reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(',')[1];
-        
-        const { data, error } = await supabase.functions.invoke('voice-to-text', {
-          body: { audio: base64Audio }
-        });
+        try {
+          const base64Audio = (reader.result as string).split(',')[1];
+          
+          if (!base64Audio) {
+            throw new Error('Failed to encode audio data');
+          }
+          
+          const { data, error } = await supabase.functions.invoke('voice-to-text', {
+            body: { audio: base64Audio }
+          });
 
-        if (error) throw error;
+          if (error) {
+            throw error;
+          }
 
-        if (data?.text) {
-          setInput(data.text);
-          toast.success("Voice transcribed successfully!");
+          if (data?.error) {
+            throw new Error(data.error);
+          }
+
+          if (data?.text) {
+            setInput(data.text);
+            setRecordingTime(0);
+            toast.success("Voice transcribed successfully!");
+          } else {
+            throw new Error('No transcription text returned');
+          }
+        } catch (err: any) {
+          console.error('Error transcribing audio:', err);
+          const errorMessage = err?.message || err?.error || 'Failed to transcribe audio. Please try again.';
+          toast.error(errorMessage);
+        } finally {
+          setIsTranscribing(false);
         }
       };
+
+      reader.onerror = () => {
+        toast.error('Failed to read audio file. Please try again.');
+        setIsTranscribing(false);
+      };
     } catch (error) {
-      console.error('Error transcribing audio:', error);
-      toast.error('Failed to transcribe audio. Please try again.');
+      console.error('Error processing audio:', error);
+      toast.error('Failed to process audio. Please try again.');
+      setIsTranscribing(false);
     }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const suggestedQuestions = [
@@ -271,32 +341,94 @@ export const AIChat = () => {
           </ScrollArea>
 
           {/* Input */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t space-y-3">
+            {/* Recording Status Bar */}
+            {(isRecording || isTranscribing) && (
+              <div className="space-y-2 animate-fade-in">
+                {isRecording && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-destructive/40 rounded-full animate-ping" />
+                      <div className="relative w-3 h-3 bg-destructive rounded-full" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-destructive">Recording...</span>
+                        <span className="text-xs font-mono text-destructive/80">{formatTime(recordingTime)}</span>
+                      </div>
+                      {/* Visual waveform bars */}
+                      <div className="flex items-end gap-1 h-4">
+                        {[...Array(5)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-1 bg-destructive rounded-full animate-pulse"
+                            style={{
+                              height: `${20 + Math.random() * 60}%`,
+                              animationDelay: `${i * 0.1}s`,
+                              animationDuration: '0.6s',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={stopRecording}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      Stop
+                    </Button>
+                  </div>
+                )}
+                
+                {isTranscribing && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/10 border border-secondary/20">
+                    <Loader2 className="h-4 w-4 text-secondary animate-spin" />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-secondary">Transcribing audio...</span>
+                      <Progress value={undefined} className="mt-2 h-1.5 bg-secondary/20" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="flex gap-2">
               <Button
-                variant={isRecording ? "destructive" : "outline"}
+                variant={isRecording ? "destructive" : isTranscribing ? "outline" : "outline"}
                 size="icon"
                 onClick={isRecording ? stopRecording : startRecording}
-                disabled={isTyping}
+                disabled={isTyping || isTranscribing}
                 title={isRecording ? "Stop recording" : "Start voice input"}
+                className={isRecording ? "animate-pulse" : ""}
               >
                 {isRecording ? (
-                  <MicOff className="h-4 w-4 animate-pulse" />
+                  <MicOff className="h-4 w-4" />
+                ) : isTranscribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Mic className="h-4 w-4" />
                 )}
               </Button>
               <Input
-                placeholder={isRecording ? "Listening..." : "Ask me anything..."}
+                placeholder={
+                  isRecording 
+                    ? "Listening... Click stop when done" 
+                    : isTranscribing 
+                    ? "Transcribing your voice..." 
+                    : "Ask me anything..."
+                }
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                  disabled={isTyping || isRecording}
+                disabled={isTyping || isRecording || isTranscribing}
+                className={isRecording ? "border-destructive/50" : ""}
               />
               <Button
                 size="icon"
                 onClick={handleSend}
-                 disabled={!input.trim() || isTyping || isRecording}
+                disabled={!input.trim() || isTyping || isRecording || isTranscribing}
                 className="bg-secondary hover:bg-secondary/90"
               >
                 <Send className="h-4 w-4" />

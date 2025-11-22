@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePortfolio } from "@/hooks/usePortfolio";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,58 +22,130 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Profile() {
-    const { user } = useAuth();
+  const { user } = useAuth();
+  const { holdings, watchlist } = usePortfolio();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [priceAlerts, setPriceAlerts] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-    const [showRiskDisclaimer, setShowRiskDisclaimer] = useState(
+  
+  // Preferences state - load from localStorage
+  const [emailNotifications, setEmailNotifications] = useState(
+    () => localStorage.getItem("emailNotifications") !== "false"
+  );
+  const [priceAlerts, setPriceAlerts] = useState(
+    () => localStorage.getItem("priceAlerts") !== "false"
+  );
+  const [marketUpdates, setMarketUpdates] = useState(
+    () => localStorage.getItem("marketUpdates") !== "false"
+  );
+  const [aiInsights, setAiInsights] = useState(
+    () => localStorage.getItem("aiInsights") !== "false"
+  );
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem("theme") === "dark"
+  );
+  const [chartType, setChartType] = useState(
+    () => localStorage.getItem("chartType") || "line"
+  );
+  const [currency, setCurrency] = useState(
+    () => localStorage.getItem("currency") || "USD"
+  );
+  const [timezone, setTimezone] = useState(
+    () => localStorage.getItem("timezone") || Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
+  const [showRiskDisclaimer, setShowRiskDisclaimer] = useState(
     () => localStorage.getItem("riskDisclaimerDisabled") !== "true"
   );
 
 
- useEffect(() => {
+  useEffect(() => {
     if (user) {
       fetchProfile();
     }
   }, [user]);
 
+  // Sync dark mode with document class
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
+
   const fetchProfile = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
+      // First, try to fetch existing profile
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user?.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle(); // Use maybeSingle instead of single to handle 0 rows
 
-      if (error) throw error;
-      
-      setProfile(data);
-      setFullName(data?.full_name || "");
-    } catch (error) {
+      // If profile doesn't exist, create it
+      if (error || !data) {
+        console.log('Profile does not exist, creating...');
+        
+        // Create profile for existing user
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+            avatar_url: user.user_metadata?.avatar_url || null,
+          }])
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          // Even if creation fails, continue with empty profile
+          setProfile(null);
+          setFullName(user.email?.split('@')[0] || '');
+        } else {
+          setProfile(newProfile);
+          setFullName(newProfile?.full_name || user.email?.split('@')[0] || '');
+        }
+      } else {
+        // Profile exists, use it
+        setProfile(data);
+        setFullName(data?.full_name || user.email?.split('@')[0] || '');
+      }
+    } catch (error: any) {
       console.error('Error fetching profile:', error);
+      // Set defaults even on error
+      setProfile(null);
+      setFullName(user.email?.split('@')[0] || '');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveProfile = async () => {
+    if (!user) return;
+
     try {
+      // Use upsert to create if doesn't exist, update if exists
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName })
-        .eq('id', user?.id);
+        .upsert({
+          id: user.id,
+          full_name: fullName,
+          avatar_url: profile?.avatar_url || null,
+        }, {
+          onConflict: 'id'
+        });
 
       if (error) throw error;
       
       toast.success("Profile updated successfully!");
       fetchProfile();
     } catch (error: any) {
+      console.error('Error saving profile:', error);
       toast.error(error.message || "Failed to update profile");
     }
   };
@@ -105,7 +178,36 @@ export default function Profile() {
   };
 
   const handleSavePreferences = () => {
-    toast.success("Preferences saved!");
+    // Save all preferences to localStorage
+    localStorage.setItem("emailNotifications", String(emailNotifications));
+    localStorage.setItem("priceAlerts", String(priceAlerts));
+    localStorage.setItem("marketUpdates", String(marketUpdates));
+    localStorage.setItem("aiInsights", String(aiInsights));
+    localStorage.setItem("theme", darkMode ? "dark" : "light");
+    localStorage.setItem("chartType", chartType);
+    localStorage.setItem("currency", currency);
+    localStorage.setItem("timezone", timezone);
+    
+    toast.success("Preferences saved successfully!");
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
+
+  const getTotalHoldings = () => holdings.length;
+  const getTotalWatchlist = () => watchlist.length;
+  
+  // Calculate success rate (placeholder - would need actual trading data)
+  const getSuccessRate = () => {
+    // This would be calculated from actual trading data
+    // For now, return a placeholder
+    return null;
   };
 
   return (
@@ -132,14 +234,14 @@ export default function Profile() {
                 </Avatar>
                
               </div>
-         <h3 className="font-semibold text-lg mb-1">
-                {loading ? "Loading..." : profile?.full_name || "User"}
+              <h3 className="font-semibold text-lg mb-1">
+                {loading ? "Loading..." : profile?.full_name || user?.email?.split('@')[0] || "User"}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                   {user?.email}
               </p>
               <div className="text-xs text-muted-foreground">
-                Member since November 2025
+                Member since {profile?.created_at ? formatDate(profile.created_at) : "N/A"}
               </div>
             </div>
 
@@ -147,16 +249,18 @@ export default function Profile() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Total Analyzed</span>
-                <span className="font-semibold">127</span>
+                <span className="text-muted-foreground">Total Holdings</span>
+                <span className="font-semibold">{getTotalHoldings()}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Watchlist Items</span>
-                <span className="font-semibold">24</span>
+                <span className="font-semibold">{getTotalWatchlist()}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Success Rate</span>
-                <span className="font-semibold text-success">89%</span>
+                <span className="text-muted-foreground">Portfolio Value</span>
+                <span className="font-semibold text-success">
+                  {holdings.length > 0 ? 'Active' : 'Empty'}
+                </span>
               </div>
             </div>
           </Card>
@@ -311,7 +415,11 @@ export default function Profile() {
                           Daily market summary and insights
                         </p>
                       </div>
-                      <Switch id="marketUpdates" />
+                      <Switch 
+                        id="marketUpdates" 
+                        checked={marketUpdates}
+                        onCheckedChange={setMarketUpdates}
+                      />
                     </div>
 
                     <Separator />
@@ -323,7 +431,11 @@ export default function Profile() {
                           Personalized AI recommendations
                         </p>
                       </div>
-                      <Switch id="aiInsights" defaultChecked />
+                      <Switch 
+                        id="aiInsights" 
+                        checked={aiInsights}
+                        onCheckedChange={setAiInsights}
+                      />
                     </div>
 
                     <Button
@@ -358,7 +470,7 @@ export default function Profile() {
                         checked={darkMode}
                         onCheckedChange={(checked) => {
                           setDarkMode(checked);
-                          document.documentElement.classList.toggle("dark", checked);
+                          localStorage.setItem("theme", checked ? "dark" : "light");
                         }}
                       />
                     </div>
@@ -368,8 +480,18 @@ export default function Profile() {
                     <div>
                       <Label>Default Chart Type</Label>
                       <div className="grid grid-cols-2 gap-3 mt-2">
-                        <Button variant="outline">Line Chart</Button>
-                        <Button variant="outline">Candlestick</Button>
+                        <Button 
+                          variant={chartType === "line" ? "default" : "outline"}
+                          onClick={() => setChartType("line")}
+                        >
+                          Line Chart
+                        </Button>
+                        <Button 
+                          variant={chartType === "candlestick" ? "default" : "outline"}
+                          onClick={() => setChartType("candlestick")}
+                        >
+                          Candlestick
+                        </Button>
                       </div>
                     </div>
 
@@ -378,11 +500,26 @@ export default function Profile() {
                     <div>
                       <Label>Currency Display</Label>
                       <div className="grid grid-cols-3 gap-3 mt-2">
-                        <Button variant="outline">USD ($)</Button>
-                        <Button variant="outline">EUR (€)</Button>
-                        <Button variant="outline">GBP (£)</Button>
+                        <Button 
+                          variant={currency === "USD" ? "default" : "outline"}
+                          onClick={() => setCurrency("USD")}
+                        >
+                          USD ($)
+                        </Button>
+                        <Button 
+                          variant={currency === "EUR" ? "default" : "outline"}
+                          onClick={() => setCurrency("EUR")}
+                        >
+                          EUR (€)
+                        </Button>
+                        <Button 
+                          variant={currency === "GBP" ? "default" : "outline"}
+                          onClick={() => setCurrency("GBP")}
+                        >
+                          GBP (£)
+                        </Button>
                       </div>
-                          </div>
+                    </div>
 
                     <Separator />
 
@@ -400,12 +537,10 @@ export default function Profile() {
                           setShowRiskDisclaimer(checked);
                           if (checked) {
                             localStorage.removeItem("riskDisclaimerDisabled");
-                            sessionStorage.clear();
-                            toast.success("Risk disclaimer enabled");
                           } else {
                             localStorage.setItem("riskDisclaimerDisabled", "true");
-                            toast.success("Risk disclaimer disabled");
                           }
+                          toast.success(`Risk disclaimer ${checked ? "enabled" : "disabled"}`);
                         }}
                       />
                     </div>
@@ -413,11 +548,17 @@ export default function Profile() {
                     <Separator />
 
                     <div>
-                      <Label>Time Zone</Label>
+                      <Label htmlFor="timezone">Time Zone</Label>
                       <Input
-                        defaultValue="America/New_York (EST)"
+                        id="timezone"
+                        value={timezone}
+                        onChange={(e) => setTimezone(e.target.value)}
+                        placeholder="e.g., America/New_York"
                         className="mt-2"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                      </p>
                     </div>
 
                     <Button
