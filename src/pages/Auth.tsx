@@ -88,8 +88,31 @@ const Auth = () => {
 
       // Check if Supabase is configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        throw new Error('Supabase is not configured. Please check your environment variables.');
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        const isProduction = import.meta.env.PROD;
+        const errorMsg = isProduction
+          ? 'Environment variables missing in Vercel. Go to Vercel → Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
+          : 'Environment variables missing. Check your .env.local file.';
+        
+        toast({
+          title: "Configuration Error",
+          description: errorMsg,
+          variant: "destructive",
+          duration: 15000,
+        });
+        
+        console.error('❌ Missing Supabase environment variables:', {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey,
+          isProduction,
+          fix: isProduction 
+            ? 'Add env vars in Vercel Dashboard → Settings → Environment Variables → Redeploy'
+            : 'Add to .env.local file',
+        });
+        
+        throw new Error(errorMsg);
       }
 
       // Get redirect URL from environment or use current origin
@@ -99,6 +122,8 @@ const Auth = () => {
         email,
         redirectUrl,
         supabaseUrl: supabaseUrl.substring(0, 30) + '...', // Log partial URL for debugging
+        hasKey: !!supabaseKey,
+        isProduction: import.meta.env.PROD,
       });
       
       // Retry logic for connection issues
@@ -242,13 +267,38 @@ const Auth = () => {
 
       // Check if Supabase is configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        throw new Error('Supabase is not configured. Please check your environment variables.');
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        const isProduction = import.meta.env.PROD;
+        const errorMsg = isProduction
+          ? 'Environment variables missing in Vercel. Go to Vercel → Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
+          : 'Environment variables missing. Check your .env.local file.';
+        
+        toast({
+          title: "Configuration Error",
+          description: errorMsg,
+          variant: "destructive",
+          duration: 15000,
+        });
+        
+        console.error('❌ Missing Supabase environment variables:', {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey,
+          isProduction,
+          fix: isProduction 
+            ? 'Add env vars in Vercel Dashboard → Settings → Environment Variables → Redeploy'
+            : 'Add to .env.local file',
+        });
+        
+        throw new Error(errorMsg);
       }
 
       console.log('Attempting signin with:', {
         email,
         supabaseUrl: supabaseUrl.substring(0, 30) + '...',
+        hasKey: !!supabaseKey,
+        isProduction: import.meta.env.PROD,
       });
 
       const { data, error } = await supabase.auth.signInWithPassword({
