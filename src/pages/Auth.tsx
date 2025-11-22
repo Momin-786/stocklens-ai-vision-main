@@ -31,6 +31,24 @@ const Auth = () => {
       // Don't block the UI, but log the issues for debugging
     }
 
+    // Test connection on mount (non-blocking)
+    const testConnection = async () => {
+      const { testSupabaseConnection } = await import('@/utils/supabaseCheck');
+      const result = await testSupabaseConnection();
+      
+      if (!result.connected && result.isPaused) {
+        console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
+        toast({
+          title: "Supabase Connection Issue",
+          description: result.suggestion || "Your Supabase project might be paused. Check the dashboard.",
+          variant: "destructive",
+          duration: 10000, // Show for 10 seconds
+        });
+      }
+    };
+    
+    testConnection().catch(console.error);
+
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -39,11 +57,12 @@ const Auth = () => {
     }).catch((error) => {
       console.error('Error checking session:', error);
       // If there's a connection error, show a helpful message
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('network')) {
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('network') || error.message?.includes('ERR_CONNECTION_RESET')) {
         toast({
           title: "Connection Error",
-          description: "Unable to connect to authentication service. Please check your configuration.",
+          description: "Unable to connect to Supabase. Your project might be paused. Check Supabase Dashboard → Settings → General → Resume Project if paused.",
           variant: "destructive",
+          duration: 10000,
         });
       }
     });
@@ -82,18 +101,71 @@ const Auth = () => {
         supabaseUrl: supabaseUrl.substring(0, 30) + '...', // Log partial URL for debugging
       });
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${redirectUrl}/`,
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-
-      console.log('Signup response:', { data: data?.user ? 'User created' : 'No user', error: error?.message });
+      // Retry logic for connection issues
+      let lastError: any = null;
+      let attempts = 0;
+      const maxAttempts = 2;
+      
+      while (attempts < maxAttempts) {
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${redirectUrl}/`,
+              data: {
+                full_name: fullName,
+              },
+            },
+          });
+          
+          // If successful, break out of retry loop
+          if (!error) {
+            console.log('Signup successful on attempt', attempts + 1);
+            // Handle success (moved outside retry loop)
+            toast({
+              title: "Account created!",
+              description: "Go to gmail and verify your email to proceed.",
+            });
+            return; // Exit function on success
+          }
+          
+          // If error is not a connection error, don't retry
+          if (!error.message.includes("Failed to fetch") && 
+              !error.message.includes("network") && 
+              !error.message.includes("connection") &&
+              !error.message.includes("ERR_CONNECTION_RESET")) {
+            lastError = error;
+            break; // Exit retry loop for non-connection errors
+          }
+          
+          lastError = error;
+          attempts++;
+          
+          if (attempts < maxAttempts) {
+            console.log(`Retry attempt ${attempts + 1}/${maxAttempts} after connection error...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+          }
+        } catch (err: any) {
+          lastError = err;
+          attempts++;
+          
+          if (attempts < maxAttempts && (
+            err.message?.includes("Failed to fetch") || 
+            err.message?.includes("network") || 
+            err.message?.includes("connection") ||
+            err.message?.includes("ERR_CONNECTION_RESET")
+          )) {
+            console.log(`Retry attempt ${attempts + 1}/${maxAttempts} after connection error...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          } else {
+            break; // Exit retry loop
+          }
+        }
+      }
+      
+      // Handle error after retries
+      const error = lastError;
 
       if (error) {
         console.error('Signup error:', error);
@@ -122,25 +194,31 @@ const Auth = () => {
             currentSiteUrl: redirectUrl,
             instructions: "Go to Supabase Dashboard → Authentication → URL Configuration → Set Site URL to: " + redirectUrl,
           });
-        } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection")) {
+        } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
           toast({
-            title: "Connection Error",
-            description: "Unable to connect to the server. Please check your internet connection and try again.",
+            title: "Connection Error - Project Likely Paused",
+            description: "Your Supabase project is likely paused. Go to https://app.supabase.com/ → Your Project → Settings → General → Resume Project. Wait 2-3 minutes, then try again.",
             variant: "destructive",
+            duration: 15000, // Show for 15 seconds
           });
-          console.error("Network error. Check:", {
+          console.error("⚠️ CONNECTION RESET DETECTED - Most likely cause: Paused Supabase project", {
             supabaseUrl,
             redirectUrl,
             error: error.message,
+            immediateAction: "Go to https://app.supabase.com/ → Project 'lvmumjsocfvxxxzrdhnq' → Settings → General → Resume Project",
+            waitTime: "Wait 2-3 minutes after resuming for services to restart",
+            troubleshooting: [
+              "1. Open https://app.supabase.com/",
+              "2. Select project: lvmumjsocfvxxxzrdhnq",
+              "3. Go to Settings → General",
+              "4. Look for 'Project Status' - if paused, click 'Resume Project'",
+              "5. Wait 2-3 minutes for all services to restart",
+              "6. Try signing up again",
+            ],
           });
         } else {
           throw error;
         }
-      } else {
-        toast({
-          title: "Account created!",
-          description: "Go to gmail and verify your email to proceed.",
-        });
       }
     } catch (error: any) {
       toast({
@@ -189,15 +267,22 @@ const Auth = () => {
             description: "Email or password is incorrect.",
             variant: "destructive",
           });
-        } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection")) {
+        } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
           toast({
             title: "Connection Error",
-            description: "Unable to connect to the server. Please check your internet connection and try again.",
+            description: "Unable to connect to Supabase. Your project might be paused. Check Supabase Dashboard and resume if needed.",
             variant: "destructive",
           });
-          console.error("Network error during signin:", {
+          console.error("Connection error during signin. Possible causes:", {
             supabaseUrl,
             error: error.message,
+            troubleshooting: [
+              "1. Check if Supabase project is paused (free tier pauses after inactivity)",
+              "2. Go to Supabase Dashboard → Settings → General",
+              "3. If paused, click 'Resume Project'",
+              "4. Wait 1-2 minutes for project to restart",
+              "5. Try again",
+            ],
           });
         } else {
           throw error;

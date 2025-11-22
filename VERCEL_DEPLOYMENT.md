@@ -122,9 +122,12 @@ This error indicates the connection to Supabase is being reset. Common causes:
    - Check the URL in Supabase Dashboard → Settings → API
 
 3. **Supabase Project Issues:**
-   - Check if your Supabase project is paused (free tier projects pause after inactivity)
+   - **MOST COMMON:** Check if your Supabase project is paused (free tier projects pause after 7 days of inactivity)
+   - **How to check:** Go to Supabase Dashboard → Settings → General → Project Status
+   - **How to fix:** If paused, click "Resume Project" and wait 1-2 minutes
    - Verify the project is active in Supabase Dashboard
    - Check if you've exceeded rate limits
+   - **Note:** After resuming, wait 2-3 minutes for all services to fully restart
 
 4. **Network/Firewall Issues:**
    - Some networks block connections to Supabase
