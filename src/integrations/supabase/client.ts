@@ -62,7 +62,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-    redirectTo: import.meta.env.VITE_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : ''),
     flowType: 'pkce', // Use PKCE flow for better security
     detectSessionInUrl: true,
   },
@@ -70,7 +69,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     headers: {
       'x-client-info': 'stocklens-web',
     },
-    // Removed custom fetch to avoid interference - using default fetch
-    // If timeout is needed, Supabase client handles it internally
+    fetch: (url, options = {}) => {
+      // Set explicit referrer policy to no-referrer to avoid cross-origin blocking
+      const fetchOptions: RequestInit = {
+        ...options,
+        referrerPolicy: 'no-referrer' as ReferrerPolicy,
+      };
+      return fetch(url, fetchOptions);
+    },
   },
 });
