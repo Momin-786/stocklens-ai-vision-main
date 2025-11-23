@@ -29,22 +29,22 @@ if (!SUPABASE_PUBLISHABLE_KEY) {
 // Debug logging in development
 if (import.meta.env.DEV) {
   console.log('✅ Supabase environment variables loaded:', {
-    url: SUPABASE_URL.substring(0, 30) + "...",
+    url: SUPABASE_URL.substring(0, 30) + '...',
     hasKey: !!SUPABASE_PUBLISHABLE_KEY,
     keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0,
   });
 }
 
-// Diagnostic tool for browser (development only)
+// Expose for browser console diagnostics (development only)
 if (typeof window !== 'undefined' && import.meta.env.DEV) {
-  (window as any)._SUPABASE_DIAGNOSTIC_ = {
+  (window as any).__SUPABASE_DIAGNOSTIC__ = {
     url: SUPABASE_URL,
     hasKey: !!SUPABASE_PUBLISHABLE_KEY,
-    keyPreview: SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) + "...",
+    keyPreview: SUPABASE_PUBLISHABLE_KEY?.substring(0, 20) + '...',
     testConnection: async () => {
       try {
         const response = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
-          headers: { apikey: SUPABASE_PUBLISHABLE_KEY || '' }
+          headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY || '' }
         });
         return { status: response.status, ok: response.ok };
       } catch (error: any) {
@@ -52,40 +52,27 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
       }
     }
   };
-  console.log("💡 Diagnostic tool available: window._SUPABASE_DIAGNOSTIC_");
+  console.log('💡 Diagnostic tool available: window.__SUPABASE_DIAGNOSTIC__');
 }
 
-// ✅ FINAL FIXED CLIENT (WORKS ON WIFI + VERCEL)
+// Import the supabase client like this:
+// import { supabase } from "@/integrations/supabase/client";
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-    flowType: "pkce",
+    flowType: 'pkce', // Use PKCE flow for better security
     detectSessionInUrl: true,
+    // Note: `redirectTo` is not a supported createClient auth option; provide redirect URLs
+    // when calling auth methods (e.g., signIn, signInWithOAuth) instead.
   },
   global: {
     headers: {
-      "x-client-info": "stocklens-web",
+      'x-client-info': 'stocklens-web',
     },
-
-    // 🚀 FIXED FETCH OVERRIDE (IMPORTANT)
-    fetch: (url, options: RequestInit = {}) => {
-      return fetch(url, {
-        ...options,
-        // Merge headers safely
-        headers: {
-          ...(options.headers || {}),
-          "x-client-info": "stocklens-web",
-        },
-
-        // 🚀 FIX FOR WIFI + ISP REFERRER BLOCKING
-        referrerPolicy: "no-referrer",
-
-        // 🚀 Ensures proper CORS behavior
-        mode: "cors",
-        credentials: "omit",
-      });
-    },
-  }
+    // Removed custom fetch to avoid interference - using default fetch
+    // If timeout is needed, Supabase client handles it internally
+  },
 });
