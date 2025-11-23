@@ -45,16 +45,16 @@ export const checkSupabaseConfig = () => {
 export const testSupabaseConnection = async () => {
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+  const isNetlify = typeof window !== 'undefined' && window.location.hostname.includes('netlify.app');
   
   // Just check if environment variables are set
-  // Don't make actual network requests - they can fail due to CORS on Vercel
+  // Don't make actual network requests - they can fail due to CORS on Netlify
   // and give false positives. Real auth attempts will show actual issues.
   if (!url || !key) {
     return {
       connected: false,
-      error: isVercel 
-        ? 'Environment variables missing in Vercel. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in Vercel Settings → Environment Variables, then redeploy.'
+      error: isNetlify 
+        ? 'Environment variables missing in Netlify. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in Netlify Site Settings → Environment Variables, then redeploy.'
         : 'Environment variables missing. Check your .env.local file.',
     };
   }
@@ -63,10 +63,11 @@ export const testSupabaseConnection = async () => {
   // Actual auth attempts will reveal real issues
   return {
     connected: true,
-    message: isVercel 
-      ? 'Environment variables are set. If localhost works, Supabase is active. Connection issues on Vercel are usually CORS/Site URL configuration.'
+    message: isNetlify 
+      ? 'Environment variables are set. If localhost works, Supabase is active. Connection issues on Netlify are usually CORS/Site URL configuration.'
       : 'Environment variables are set. Ready to connect.',
     skipped: true, // Mark as skipped since we didn't actually test
+    isNetlifyIssue: isNetlify, // Flag for Netlify-specific issues
   };
 };
 

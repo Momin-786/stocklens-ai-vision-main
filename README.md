@@ -45,7 +45,7 @@ It combines **AI-powered analysis**, **real-time stock data**, and **HCI design 
 
 This application is **not for real trading**, but rather a **mock analytical platform** for educational and decision-support purposes.
 
-🔗 **Live Demo:** [https://stocklens-ai-vision-main.vercel.app/](https://stocklens-ai-vision-main.vercel.app/)
+🔗 **Live Demo:** [https://stocklens-ai-vision.netlify.app/](https://stocklens-ai-vision.netlify.app/)
 
 ---
 
@@ -104,9 +104,13 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key-here
 VITE_SITE_URL=http://localhost:8080
 ```
 
-#### Deploying to Vercel
+#### Deploying to Netlify
 
-See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed deployment instructions, including how to fix Supabase authentication errors.
+See [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md) for a complete step-by-step deployment guide, including:
+- How to create and connect your Netlify site
+- Required environment variables and where to find them
+- Supabase configuration for Netlify
+- Troubleshooting common issues
 
 ---
 
@@ -123,7 +127,7 @@ See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for detailed deployment instr
 * **Framer Motion** – Animations
 * **Lucide Icons / React Icons** – Icons
 * **Moment.js** – Date formatting
-* **Vercel** – Deployment
+* **Netlify** – Deployment
 
 > See dependencies in `package.json`
 

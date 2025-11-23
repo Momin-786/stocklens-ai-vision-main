@@ -9,20 +9,20 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 if (!SUPABASE_URL) {
   const isProduction = import.meta.env.PROD;
   const errorMsg = isProduction 
-    ? 'Missing VITE_SUPABASE_URL in Vercel. Go to Vercel → Settings → Environment Variables → Add VITE_SUPABASE_URL'
+    ? 'Missing VITE_SUPABASE_URL in Netlify. Go to Netlify → Site Settings → Environment Variables → Add VITE_SUPABASE_URL'
     : 'Missing VITE_SUPABASE_URL environment variable. Check your .env.local file.';
   console.error('❌ Missing VITE_SUPABASE_URL environment variable');
-  console.error('📍 Location:', isProduction ? 'Vercel Dashboard → Settings → Environment Variables' : 'Local .env.local file');
+  console.error('📍 Location:', isProduction ? 'Netlify Dashboard → Site Settings → Environment Variables' : 'Local .env.local file');
   throw new Error(errorMsg);
 }
 
 if (!SUPABASE_PUBLISHABLE_KEY) {
   const isProduction = import.meta.env.PROD;
   const errorMsg = isProduction
-    ? 'Missing VITE_SUPABASE_PUBLISHABLE_KEY in Vercel. Go to Vercel → Settings → Environment Variables → Add VITE_SUPABASE_PUBLISHABLE_KEY'
+    ? 'Missing VITE_SUPABASE_PUBLISHABLE_KEY in Netlify. Go to Netlify → Site Settings → Environment Variables → Add VITE_SUPABASE_PUBLISHABLE_KEY'
     : 'Missing VITE_SUPABASE_PUBLISHABLE_KEY environment variable. Check your .env.local file.';
   console.error('❌ Missing VITE_SUPABASE_PUBLISHABLE_KEY environment variable');
-  console.error('📍 Location:', isProduction ? 'Vercel Dashboard → Settings → Environment Variables' : 'Local .env.local file');
+  console.error('📍 Location:', isProduction ? 'Netlify Dashboard → Site Settings → Environment Variables' : 'Local .env.local file');
   throw new Error(errorMsg);
 }
 

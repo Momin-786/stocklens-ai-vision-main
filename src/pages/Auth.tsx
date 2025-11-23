@@ -32,13 +32,13 @@ const Auth = () => {
     }
 
     // Test connection on mount (non-blocking)
-    // Only show warnings for actual issues, not Vercel CORS false positives
-    const testConnection = async () => {
-      const { testSupabaseConnection } = await import('@/utils/supabaseCheck');
-      const result = await testSupabaseConnection();
-      
-      // Only show warning if it's a real issue (not skipped or Vercel CORS)
-      if (!result.connected && !result.skipped && !result.isVercelIssue) {
+      // Only show warnings for actual issues, not Netlify CORS false positives
+      const testConnection = async () => {
+        const { testSupabaseConnection } = await import('@/utils/supabaseCheck');
+        const result = await testSupabaseConnection();
+        
+        // Only show warning if it's a real issue (not skipped or Netlify CORS)
+        if (!result.connected && !result.skipped && !result.isNetlifyIssue) {
         if (result.isPaused) {
           console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
           toast({
@@ -48,12 +48,12 @@ const Auth = () => {
             duration: 10000,
           });
         }
-      } else if (result.isVercelIssue) {
-        // Vercel-specific issue - show helpful message
-        console.warn('⚠️ Vercel connection issue detected:', result);
+      } else if (result.isNetlifyIssue) {
+        // Netlify-specific issue - show helpful message
+        console.warn('⚠️ Netlify connection issue detected:', result);
         toast({
-          title: "Vercel Configuration Needed",
-          description: result.suggestion || "Check Supabase Site URL and Vercel environment variables.",
+          title: "Netlify Configuration Needed",
+          description: result.suggestion || "Check Supabase Site URL and Netlify environment variables.",
           variant: "destructive",
           duration: 15000,
         });
@@ -106,7 +106,7 @@ const Auth = () => {
       if (!supabaseUrl || !supabaseKey) {
         const isProduction = import.meta.env.PROD;
         const errorMsg = isProduction
-          ? 'Environment variables missing in Vercel. Go to Vercel → Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
+          ? 'Environment variables missing in Netlify. Go to Netlify → Site Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
           : 'Environment variables missing. Check your .env.local file.';
         
         toast({
@@ -121,7 +121,7 @@ const Auth = () => {
           hasKey: !!supabaseKey,
           isProduction,
           fix: isProduction 
-            ? 'Add env vars in Vercel Dashboard → Settings → Environment Variables → Redeploy'
+            ? 'Add env vars in Netlify Dashboard → Site Settings → Environment Variables → Redeploy'
             : 'Add to .env.local file',
         });
         
@@ -221,7 +221,7 @@ const Auth = () => {
             description: "Please contact support. The redirect URL needs to be configured.",
             variant: "destructive",
           });
-          console.error("Supabase redirect URL error. Make sure your Vercel URL is whitelisted in Supabase:", redirectUrl);
+          console.error("Supabase redirect URL error. Make sure your Netlify URL is whitelisted in Supabase:", redirectUrl);
         } else if (error.message.includes("CORS") || error.message.includes("Access-Control-Allow-Origin")) {
           toast({
             title: "CORS Configuration Error",
@@ -233,13 +233,13 @@ const Auth = () => {
             instructions: "Go to Supabase Dashboard → Authentication → URL Configuration → Set Site URL to: " + redirectUrl,
           });
         } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
-          const isVercel = window.location.hostname.includes('vercel.app');
+          const isNetlify = window.location.hostname.includes('netlify.app');
           
-          if (isVercel) {
-            // On Vercel, connection reset usually means CORS/Site URL issue, not paused project
+          if (isNetlify) {
+            // On Netlify, connection reset usually means CORS/Site URL issue, not paused project
             toast({
-              title: "Vercel Configuration Issue",
-              description: "Since localhost works, this is a Vercel config issue. Check: 1) Supabase Dashboard → Authentication → URL Configuration → Set Site URL to your Vercel URL, 2) Verify Vercel environment variables are set correctly.",
+              title: "Netlify Configuration Issue",
+              description: "Since localhost works, this is a Netlify config issue. Check: 1) Supabase Dashboard → Authentication → URL Configuration → Set Site URL to your Netlify URL, 2) Verify Netlify environment variables are set correctly.",
               variant: "destructive",
               duration: 20000, // Show for 20 seconds
             });
@@ -274,7 +274,7 @@ const Auth = () => {
                 "2. Check browser extensions",
                 "3. Check network firewall settings",
                 "4. See NETWORK_BLOCK_SOLUTION.md for full guide",
-                "5. Contact Supabase/Vercel support if persists",
+                "5. Contact Supabase/Netlify support if persists",
               ],
             });
           } else {
@@ -332,7 +332,7 @@ const Auth = () => {
       if (!supabaseUrl || !supabaseKey) {
         const isProduction = import.meta.env.PROD;
         const errorMsg = isProduction
-          ? 'Environment variables missing in Vercel. Go to Vercel → Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
+          ? 'Environment variables missing in Netlify. Go to Netlify → Site Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
           : 'Environment variables missing. Check your .env.local file.';
         
         toast({
@@ -347,7 +347,7 @@ const Auth = () => {
           hasKey: !!supabaseKey,
           isProduction,
           fix: isProduction 
-            ? 'Add env vars in Vercel Dashboard → Settings → Environment Variables → Redeploy'
+            ? 'Add env vars in Netlify Dashboard → Site Settings → Environment Variables → Redeploy'
             : 'Add to .env.local file',
         });
         
@@ -378,19 +378,19 @@ const Auth = () => {
             variant: "destructive",
           });
         } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
-          const isVercel = window.location.hostname.includes('vercel.app');
+          const isNetlify = window.location.hostname.includes('netlify.app');
           
-          if (isVercel) {
+          if (isNetlify) {
             toast({
-              title: "Vercel Configuration Issue",
-              description: "Since localhost works, check: 1) Supabase Site URL configuration, 2) Vercel environment variables are set correctly.",
+              title: "Netlify Configuration Issue",
+              description: "Since localhost works, check: 1) Supabase Site URL configuration, 2) Netlify environment variables are set correctly.",
               variant: "destructive",
               duration: 20000,
             });
-            console.error("⚠️ Connection error on Vercel - Configuration issue", {
+            console.error("⚠️ Connection error on Netlify - Configuration issue", {
               supabaseUrl,
               error: error.message,
-              fix: "Check Supabase Site URL and Vercel environment variables",
+              fix: "Check Supabase Site URL and Netlify environment variables",
             });
           } else {
             toast({
