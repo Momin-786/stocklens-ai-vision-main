@@ -35,8 +35,8 @@ if (import.meta.env.DEV) {
   });
 }
 
-// Expose for browser console diagnostics (development only)
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
+// Expose for browser console diagnostics (works in both dev and production)
+if (typeof window !== 'undefined') {
   (window as any).__SUPABASE_DIAGNOSTIC__ = {
     url: SUPABASE_URL,
     hasKey: !!SUPABASE_PUBLISHABLE_KEY,
@@ -46,13 +46,34 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
         const response = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
           headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY || '' }
         });
-        return { status: response.status, ok: response.ok };
+        return { status: response.status, ok: response.ok, statusText: response.statusText };
+      } catch (error: any) {
+        return { error: error.message, name: error.name, stack: error.stack };
+      }
+    },
+    testDirectUrl: async () => {
+      try {
+        const response = await fetch(SUPABASE_URL, { method: 'HEAD' });
+        return { status: response.status, ok: response.ok, statusText: response.statusText };
       } catch (error: any) {
         return { error: error.message, name: error.name };
       }
+    },
+    checkConfig: () => {
+      return {
+        url: SUPABASE_URL,
+        urlValid: SUPABASE_URL?.startsWith('https://') && SUPABASE_URL?.includes('.supabase.co'),
+        hasKey: !!SUPABASE_PUBLISHABLE_KEY,
+        keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0,
+        isProduction: import.meta.env.PROD,
+      };
     }
   };
-  console.log('💡 Diagnostic tool available: window.__SUPABASE_DIAGNOSTIC__');
+  if (import.meta.env.DEV) {
+    console.log('💡 Diagnostic tool available: window.__SUPABASE_DIAGNOSTIC__');
+  } else {
+    console.log('💡 Run window.__SUPABASE_DIAGNOSTIC__.testConnection() to test Supabase connection');
+  }
 }
 
 // Import the supabase client like this:

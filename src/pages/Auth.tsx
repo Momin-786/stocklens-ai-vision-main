@@ -130,13 +130,17 @@ const Auth = () => {
 
       // Get redirect URL from environment or use current origin
       const redirectUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+      // Remove trailing slash if present, we'll add it in emailRedirectTo
+      const cleanRedirectUrl = redirectUrl.replace(/\/$/, '');
       
       console.log('Attempting signup with:', {
         email,
-        redirectUrl,
+        redirectUrl: cleanRedirectUrl,
         supabaseUrl: supabaseUrl.substring(0, 30) + '...', // Log partial URL for debugging
         hasKey: !!supabaseKey,
         isProduction: import.meta.env.PROD,
+        currentOrigin: window.location.origin,
+        viteSiteUrl: import.meta.env.VITE_SITE_URL,
       });
       
       // Retry logic for connection issues
@@ -150,7 +154,7 @@ const Auth = () => {
             email,
             password,
             options: {
-              emailRedirectTo: `${redirectUrl}/`,
+              emailRedirectTo: `${cleanRedirectUrl}/`,
               data: {
                 full_name: fullName,
               },
@@ -166,6 +170,26 @@ const Auth = () => {
               description: "Go to gmail and verify your email to proceed.",
             });
             return; // Exit function on success
+          }
+          
+          // Log full error details for debugging
+          console.error('Signup error details:', {
+            message: error.message,
+            status: error.status,
+            name: error.name,
+            error: error,
+            fullError: JSON.stringify(error, null, 2),
+          });
+          
+          // Also log to window for easy debugging in production
+          if (typeof window !== 'undefined') {
+            (window as any).__LAST_SIGNUP_ERROR__ = {
+              message: error.message,
+              status: error.status,
+              name: error.name,
+              error: error,
+              timestamp: new Date().toISOString(),
+            };
           }
           
           // If error is not a connection error, don't retry
@@ -206,47 +230,77 @@ const Auth = () => {
       const error = lastError;
 
       if (error) {
-        console.error('Signup error:', error);
+        // Log full error object for debugging
+        console.error('Signup error (full details):', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          error: error,
+          redirectUrl: cleanRedirectUrl,
+          supabaseUrl: supabaseUrl,
+        });
         
         // Handle specific error cases
-        if (error.message.includes("already registered") || error.message.includes("already been registered")) {
+        if (error.message?.includes("already registered") || error.message?.includes("already been registered")) {
           toast({
             title: "Account exists",
             description: "This email is already registered. Please sign in instead.",
             variant: "destructive",
           });
-        } else if (error.message.includes("redirect_to") || error.message.includes("redirect URL")) {
+        } else if (error.message?.includes("redirect_to") || error.message?.includes("redirect URL") || error.message?.includes("Invalid redirect_to")) {
           toast({
-            title: "Configuration Error",
-            description: "Please contact support. The redirect URL needs to be configured.",
+            title: "Redirect URL Error",
+            description: `The redirect URL "${cleanRedirectUrl}/" is not whitelisted in Supabase. Go to Supabase Dashboard → Authentication → URL Configuration and add: ${cleanRedirectUrl}/**`,
             variant: "destructive",
+            duration: 20000,
           });
-          console.error("Supabase redirect URL error. Make sure your Netlify URL is whitelisted in Supabase:", redirectUrl);
-        } else if (error.message.includes("CORS") || error.message.includes("Access-Control-Allow-Origin")) {
+          console.error("Supabase redirect URL error. Make sure your Netlify URL is whitelisted in Supabase:", {
+            redirectUrl: cleanRedirectUrl,
+            emailRedirectTo: `${cleanRedirectUrl}/`,
+            fix: `Add to Supabase Redirect URLs: ${cleanRedirectUrl}/**`,
+          });
+        } else if (error.message?.includes("CORS") || error.message?.includes("Access-Control-Allow-Origin")) {
           toast({
             title: "CORS Configuration Error",
-            description: "Please configure the Site URL in Supabase Dashboard → Authentication → URL Configuration. Set it to: " + redirectUrl,
+            description: `Please configure the Site URL in Supabase Dashboard → Authentication → URL Configuration. Set it to: ${cleanRedirectUrl}`,
             variant: "destructive",
+            duration: 20000,
           });
           console.error("CORS error detected. Configure Site URL in Supabase Dashboard:", {
-            currentSiteUrl: redirectUrl,
-            instructions: "Go to Supabase Dashboard → Authentication → URL Configuration → Set Site URL to: " + redirectUrl,
+            currentSiteUrl: cleanRedirectUrl,
+            instructions: `Go to Supabase Dashboard → Authentication → URL Configuration → Set Site URL to: ${cleanRedirectUrl}`,
           });
-        } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
+        } else if (error.message?.includes("Failed to fetch") || error.message?.includes("network") || error.message?.includes("connection") || error.message?.includes("ERR_CONNECTION_RESET")) {
           const isNetlify = window.location.hostname.includes('netlify.app');
           
+          // Provide diagnostic help
+          console.error("🔍 Connection Error - Run diagnostics:", {
+            testConnection: "Run: window.__SUPABASE_DIAGNOSTIC__.testConnection()",
+            testDirectUrl: "Run: window.__SUPABASE_DIAGNOSTIC__.testDirectUrl()",
+            checkConfig: "Run: window.__SUPABASE_DIAGNOSTIC__.checkConfig()",
+            supabaseUrl: supabaseUrl,
+            errorDetails: error,
+          });
+          
+          toast({
+            title: "Connection Error",
+            description: `Cannot connect to Supabase. Open browser console (F12) and run: window.__SUPABASE_DIAGNOSTIC__.testConnection() to diagnose. Check: 1) Project is active in Supabase Dashboard, 2) URL is correct, 3) Network/firewall not blocking.`,
+            variant: "destructive",
+            duration: 25000,
+          });
+          
           if (isNetlify) {
-            // On Netlify, connection reset usually means CORS/Site URL issue, not paused project
-            toast({
-              title: "Netlify Configuration Issue",
-              description: "Since localhost works, this is a Netlify config issue. Check: 1) Supabase Dashboard → Authentication → URL Configuration → Set Site URL to your Netlify URL, 2) Verify Netlify environment variables are set correctly.",
-              variant: "destructive",
-              duration: 20000, // Show for 20 seconds
+            console.warn("Netlify deployment - Also check:", {
+              siteUrl: cleanRedirectUrl,
+              envVars: "Netlify → Site Settings → Environment Variables",
+              supabaseConfig: "Supabase → Authentication → URL Configuration",
             });
             console.error("⚠️ NETWORK BLOCK DETECTED - Requests Not Reaching Supabase", {
               supabaseUrl,
-              redirectUrl,
+              redirectUrl: cleanRedirectUrl,
               error: error.message,
+              errorStatus: error.status,
+              errorName: error.name,
               diagnosis: "No logs in Supabase + Browser test fails = Network-level block",
               note: "Localhost works, so Supabase is ACTIVE. Requests are being blocked before reaching Supabase.",
               immediateTests: [
@@ -287,7 +341,7 @@ const Auth = () => {
             });
             console.error("⚠️ CONNECTION RESET DETECTED - Most likely cause: Paused Supabase project", {
               supabaseUrl,
-              redirectUrl,
+              redirectUrl: cleanRedirectUrl,
               error: error.message,
               immediateAction: "Go to https://app.supabase.com/ → Project 'lvmumjsocfvxxxzrdhnq' → Settings → General → Resume Project",
               waitTime: "Wait 2-3 minutes after resuming for services to restart",
@@ -302,14 +356,24 @@ const Auth = () => {
             });
           }
         } else {
-          throw error;
+          // Show the actual error message to user
+          const errorMessage = error.message || error.toString() || "Unknown error occurred";
+          toast({
+            title: "Sign up failed",
+            description: errorMessage,
+            variant: "destructive",
+            duration: 15000,
+          });
+          console.error("Unhandled signup error:", error);
         }
       }
     } catch (error: any) {
+      console.error("Signup exception caught:", error);
       toast({
         title: "Sign up failed",
-        description: error.message || "Please try again.",
+        description: error?.message || error?.toString() || "Please try again.",
         variant: "destructive",
+        duration: 15000,
       });
     } finally {
       setLoading(false);
