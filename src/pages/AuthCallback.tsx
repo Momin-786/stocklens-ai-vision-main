@@ -58,45 +58,69 @@ const AuthCallback = () => {
 
       // Set up auth state change listener to wait for session
       // Supabase with detectSessionInUrl: true should automatically process the callback
+      // With PKCE flow, we get a 'code' that needs to be exchanged for tokens
       let sessionReceived = false;
       let timeoutId: NodeJS.Timeout;
+      let subscription: any = null;
 
       const authStatePromise = new Promise<{ session: any; error: any }>((resolve) => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        // Listen for all auth state changes
+        const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             console.log('Auth state changed:', event, session ? 'Session received' : 'No session');
             
-            if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+            // PKCE flow events: CODE_EXCHANGED, SIGNED_IN, or TOKEN_REFRESHED
+            if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'CODE_EXCHANGED') && session) {
               sessionReceived = true;
-              clearTimeout(timeoutId);
-              subscription.unsubscribe();
+              if (timeoutId) clearTimeout(timeoutId);
+              if (sub) sub.unsubscribe();
               resolve({ session, error: null });
             }
           }
         );
+        subscription = sub;
 
-        // Also check for existing session immediately
-        supabase.auth.getSession().then(({ data: { session }, error }) => {
+        // Also check for existing session immediately and periodically
+        const checkSession = async () => {
+          const { data: { session }, error } = await supabase.auth.getSession();
           if (session && !sessionReceived) {
             sessionReceived = true;
-            clearTimeout(timeoutId);
-            subscription.unsubscribe();
+            if (timeoutId) clearTimeout(timeoutId);
+            if (sub) sub.unsubscribe();
             resolve({ session, error: null });
+            return true;
           }
-        });
+          return false;
+        };
 
-        // Timeout after 15 seconds
+        // Check immediately
+        checkSession();
+
+        // If we have a code, Supabase needs to exchange it - check periodically
+        if (hasCode) {
+          const intervalId = setInterval(async () => {
+            const found = await checkSession();
+            if (found) {
+              clearInterval(intervalId);
+            }
+          }, 500); // Check every 500ms
+
+          // Clear interval on timeout
+          setTimeout(() => clearInterval(intervalId), 20000);
+        }
+
+        // Timeout after 20 seconds (longer for PKCE code exchange)
         timeoutId = setTimeout(() => {
           if (!sessionReceived) {
-            subscription.unsubscribe();
-            // Don't treat timeout as error if we have tokens - Supabase might still be processing
+            if (sub) sub.unsubscribe();
+            // Don't treat timeout as error if we have code - Supabase might still be processing
             if (hasAccessToken || hasCode) {
               resolve({ session: null, error: new Error('Timeout waiting for session - Supabase may still be processing') });
             } else {
               resolve({ session: null, error: null }); // No tokens, just redirect
             }
           }
-        }, 15000);
+        }, 20000);
       });
 
       try {
@@ -105,19 +129,37 @@ const AuthCallback = () => {
         let attempts = 0;
         const maxAttempts = 3;
 
-        // If no session but we have tokens, retry (Supabase might still be processing)
+        // If no session but we have code/tokens, retry (Supabase might still be processing PKCE exchange)
         while (!result.session && (hasAccessToken || hasCode) && attempts < maxAttempts) {
           attempts++;
-          console.log(`Waiting for Supabase to process OAuth... (${attempts}/${maxAttempts})`);
+          console.log(`Waiting for Supabase to process OAuth code exchange... (${attempts}/${maxAttempts})`);
           
-          // Wait longer for Supabase to process
-          await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+          // Wait longer for Supabase to process the code exchange
+          await new Promise(resolve => setTimeout(resolve, 3000 * attempts));
           
           // Try getting session again
           const { data: { session }, error } = await supabase.auth.getSession();
           if (session) {
             result = { session, error: null };
             break;
+          }
+          
+          // If we have a code but no session, try refreshing the session
+          if (hasCode && !session && attempts === 1) {
+            console.log('Attempting to refresh session after code exchange...');
+            try {
+              // Trigger a session refresh which might complete the code exchange
+              await supabase.auth.refreshSession();
+              // Wait a bit and check again
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+              if (refreshedSession) {
+                result = { session: refreshedSession, error: null };
+                break;
+              }
+            } catch (refreshError) {
+              console.log('Session refresh attempt:', refreshError);
+            }
           }
           
           if (error && (
@@ -174,20 +216,46 @@ const AuthCallback = () => {
         } else {
           // No session found - might still be processing or failed
           if (hasAccessToken || hasCode) {
-            console.warn('No session found but OAuth tokens present - may still be processing', {
+            console.warn('No session found but OAuth code/tokens present - may still be processing', {
               hasAccessToken: !!hasAccessToken,
               hasCode: !!hasCode,
+              urlHash: window.location.hash.substring(0, 100),
             });
-            // Wait a bit more and check one more time
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              toast({
-                title: "Welcome!",
-                description: "You've successfully signed in with Google.",
-              });
-              navigate("/stocks");
-              return;
+            
+            // For PKCE flow with code, try one more time with longer wait
+            if (hasCode) {
+              console.log('Waiting additional time for PKCE code exchange...');
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              // Try refreshing session
+              try {
+                await supabase.auth.refreshSession();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              } catch (e) {
+                console.log('Refresh attempt:', e);
+              }
+              
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) {
+                toast({
+                  title: "Welcome!",
+                  description: "You've successfully signed in with Google.",
+                });
+                navigate("/stocks");
+                return;
+              }
+            } else {
+              // Has access token, wait a bit more
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) {
+                toast({
+                  title: "Welcome!",
+                  description: "You've successfully signed in with Google.",
+                });
+                navigate("/stocks");
+                return;
+              }
             }
           }
           
