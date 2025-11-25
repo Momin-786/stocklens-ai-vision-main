@@ -79,13 +79,7 @@ const Auth = () => {
     
     testConnection().catch(console.error);
 
-    // Check for OAuth callback in URL hash (Supabase PKCE flow)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get('access_token') || hashParams.get('error')) {
-      // OAuth callback detected, redirect to callback handler
-      navigate("/auth/callback", { replace: true });
-      return;
-    }
+   
 
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -179,7 +173,7 @@ const Auth = () => {
             email,
             password,
             options: {
-              emailRedirectTo: `${cleanRedirectUrl}/`,
+              emailRedirectTo: `${cleanRedirectUrl}/auth/callback`,
               data: {
                 full_name: fullName,
               },
@@ -281,7 +275,7 @@ const Auth = () => {
           });
           console.error("Supabase redirect URL error. Make sure your Netlify URL is whitelisted in Supabase:", {
             redirectUrl: cleanRedirectUrl,
-            emailRedirectTo: `${cleanRedirectUrl}/`,
+            emailRedirectTo: `${cleanRedirectUrl}/auth/callback`,
             fix: `Add to Supabase Redirect URLs: ${cleanRedirectUrl}/**`,
           });
         } else if (error.message?.includes("CORS") || error.message?.includes("Access-Control-Allow-Origin")) {
