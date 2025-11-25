@@ -10,6 +10,7 @@ import { PracticeModeProvider } from "@/contexts/PracticeModeContext";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Stocks from "./pages/Stocks";
 import Screener from "./pages/Screener";
 import Analysis from "./pages/Analysis";
@@ -81,6 +82,7 @@ const AppRoutes = () => {
           } 
         />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route 
           path="/stocks" 
           element={
