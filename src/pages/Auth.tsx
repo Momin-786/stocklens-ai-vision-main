@@ -61,25 +61,20 @@ const Auth = () => {
         
         // Only show warning if it's a real issue (not skipped or Netlify CORS)
         if (!result.connected && !result.skipped && !result.isNetlifyIssue) {
-        if (result.isPaused) {
-          console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
-          toast({
-            title: "Supabase Connection Issue",
-            description: result.suggestion || "Your Supabase project might be paused. Check the dashboard.",
-            variant: "destructive",
-            duration: 10000,
-          });
+          if (result.isPaused) {
+            console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
+            toast({
+              title: "Supabase Connection Issue",
+              description: result.suggestion || "Your Supabase project might be paused. Check the dashboard.",
+              variant: "destructive",
+              duration: 10000,
+            });
+          }
+        } else if (result.isNetlifyIssue) {
+          // Netlify-specific issue - only log to console, don't show to user
+          console.warn('⚠️ Netlify connection issue detected (console only):', result);
+          // Don't show toast to user - these are usually false positives
         }
-      } else if (result.isNetlifyIssue) {
-        // Netlify-specific issue - show helpful message
-        console.warn('⚠️ Netlify connection issue detected:', result);
-        toast({
-          title: "Netlify Configuration Needed",
-          description: result.suggestion || "Check Supabase Site URL and Netlify environment variables.",
-          variant: "destructive",
-          duration: 15000,
-        });
-      }
     };
     
     testConnection().catch(console.error);
