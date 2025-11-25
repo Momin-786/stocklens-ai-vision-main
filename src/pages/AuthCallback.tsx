@@ -9,86 +9,125 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      // Check for error in URL hash first
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const error = hashParams.get('error');
+      const errorDescription = hashParams.get('error_description');
+
+      if (error) {
+        console.error('OAuth error in callback:', error, errorDescription);
+        toast({
+          title: "Authentication failed",
+          description: errorDescription || error || "Please try again.",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+
+      // Check if we have OAuth tokens in the URL hash
+      const hasAccessToken = hashParams.get('access_token');
+      const hasCode = hashParams.get('code');
+      
+      console.log('OAuth callback detected:', {
+        hasAccessToken: !!hasAccessToken,
+        hasCode: !!hasCode,
+        hashLength: window.location.hash.length,
+      });
+
+      // Set up auth state change listener to wait for session
+      let sessionReceived = false;
+      let timeoutId: NodeJS.Timeout;
+
+      const authStatePromise = new Promise<{ session: any; error: any }>((resolve) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event, session ? 'Session received' : 'No session');
+            
+            if (event === 'SIGNED_IN' && session) {
+              sessionReceived = true;
+              clearTimeout(timeoutId);
+              subscription.unsubscribe();
+              resolve({ session, error: null });
+            } else if (event === 'TOKEN_REFRESHED' && session) {
+              sessionReceived = true;
+              clearTimeout(timeoutId);
+              subscription.unsubscribe();
+              resolve({ session, error: null });
+            }
+          }
+        );
+
+        // Also try to get session directly (in case it's already established)
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+          if (session && !sessionReceived) {
+            sessionReceived = true;
+            clearTimeout(timeoutId);
+            subscription.unsubscribe();
+            resolve({ session, error: null });
+          } else if (!session && !hasAccessToken && !hasCode) {
+            // No tokens in URL and no session - likely not an OAuth callback
+            clearTimeout(timeoutId);
+            subscription.unsubscribe();
+            resolve({ session: null, error: new Error('No OAuth tokens found in URL') });
+          }
+        });
+
+        // Timeout after 10 seconds
+        timeoutId = setTimeout(() => {
+          if (!sessionReceived) {
+            subscription.unsubscribe();
+            resolve({ session: null, error: new Error('Timeout waiting for session') });
+          }
+        }, 10000);
+      });
+
       try {
-        // Check for error in URL hash
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const error = hashParams.get('error');
-        const errorDescription = hashParams.get('error_description');
-
-        if (error) {
-          console.error('OAuth error in callback:', error, errorDescription);
-          toast({
-            title: "Authentication failed",
-            description: errorDescription || error || "Please try again.",
-            variant: "destructive",
-          });
-          navigate("/auth");
-          return;
-        }
-
-        // Supabase automatically handles the OAuth callback with PKCE flow
-        // The session should be established automatically when detectSessionInUrl is true
-        // Wait a bit for the session to be processed
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Retry logic for connection reset errors
-        let session = null;
-        let sessionError = null;
+        // Wait for session with retry logic
+        let result = await authStatePromise;
         let attempts = 0;
         const maxAttempts = 3;
 
-        while (attempts < maxAttempts && !session) {
-          try {
-            const result = await supabase.auth.getSession();
-            session = result.data.session;
-            sessionError = result.error;
-
-            if (session) {
-              break; // Success, exit retry loop
+        // If no session and we have tokens, retry
+        while (!result.session && (hasAccessToken || hasCode) && attempts < maxAttempts) {
+          attempts++;
+          console.log(`Retrying session check... (${attempts}/${maxAttempts})`);
+          
+          // Wait a bit longer for Supabase to process
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+          
+          // Try getting session again
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (session) {
+            result = { session, error: null };
+            break;
+          }
+          
+          if (error && (
+            error.message?.includes('Failed to fetch') ||
+            error.message?.includes('ERR_CONNECTION_RESET')
+          )) {
+            // Connection error, wait and retry
+            if (attempts < maxAttempts) {
+              continue;
             }
-
-            // If it's a connection reset error, retry
-            if (sessionError && (
-              sessionError.message?.includes('Failed to fetch') ||
-              sessionError.message?.includes('ERR_CONNECTION_RESET') ||
-              sessionError.message?.includes('network')
-            )) {
-              attempts++;
-              if (attempts < maxAttempts) {
-                console.warn(`Connection reset, retrying... (${attempts}/${maxAttempts})`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
-                continue;
-              }
-            } else {
-              // Not a connection error, don't retry
-              break;
-            }
-          } catch (err: any) {
-            if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_CONNECTION_RESET')) {
-              attempts++;
-              if (attempts < maxAttempts) {
-                console.warn(`Connection error, retrying... (${attempts}/${maxAttempts})`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-                continue;
-              }
-            }
-            sessionError = err;
+            result = { session: null, error };
+          } else if (error) {
+            result = { session: null, error };
             break;
           }
         }
 
-        if (sessionError) {
-          console.error('Auth callback error:', sessionError);
+        if (result.error) {
+          console.error('Auth callback error:', result.error);
           
-          // Only show user-friendly errors, not technical connection errors
-          const isConnectionError = sessionError.message?.includes('Failed to fetch') ||
-            sessionError.message?.includes('ERR_CONNECTION_RESET') ||
-            sessionError.message?.includes('network');
+          const isConnectionError = result.error.message?.includes('Failed to fetch') ||
+            result.error.message?.includes('ERR_CONNECTION_RESET') ||
+            result.error.message?.includes('network');
 
           if (isConnectionError) {
-            // Log detailed error to console only
             console.error('Connection error details:', {
-              message: sessionError.message,
+              message: result.error.message,
               attempts,
               suggestion: 'Check if Supabase project is paused or network connectivity issues'
             });
@@ -101,7 +140,7 @@ const AuthCallback = () => {
           } else {
             toast({
               title: "Authentication failed",
-              description: sessionError.message || "Please try again.",
+              description: result.error.message || "Please try again.",
               variant: "destructive",
             });
           }
@@ -109,15 +148,20 @@ const AuthCallback = () => {
           return;
         }
 
-        if (session) {
+        if (result.session) {
           toast({
             title: "Welcome!",
             description: "You've successfully signed in with Google.",
           });
           navigate("/stocks");
         } else {
-          // No session found, redirect to auth
-          console.warn('No session found after OAuth callback');
+          // No session found
+          console.warn('No session found after OAuth callback', {
+            hasAccessToken: !!hasAccessToken,
+            hasCode: !!hasCode,
+            urlHash: window.location.hash.substring(0, 100),
+          });
+          
           toast({
             title: "Sign in incomplete",
             description: "Please try signing in again.",
@@ -128,7 +172,6 @@ const AuthCallback = () => {
       } catch (error: any) {
         console.error('Auth callback exception:', error);
         
-        // Check if it's a connection error
         const isConnectionError = error?.message?.includes('Failed to fetch') ||
           error?.message?.includes('ERR_CONNECTION_RESET') ||
           error?.message?.includes('network');
