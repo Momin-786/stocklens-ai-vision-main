@@ -91,12 +91,21 @@ export default function Profile() {
         console.log('Profile does not exist, creating...');
         
         // Create profile for existing user
+        // Google OAuth provides: full_name, name, or avatar_url in user_metadata
+        const googleName = user.user_metadata?.full_name || 
+                          user.user_metadata?.name || 
+                          user.user_metadata?.display_name ||
+                          null;
+        const googleAvatar = user.user_metadata?.avatar_url || 
+                            user.user_metadata?.picture ||
+                            null;
+        
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert([{
             id: user.id,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-            avatar_url: user.user_metadata?.avatar_url || null,
+            full_name: googleName || user.email?.split('@')[0] || '',
+            avatar_url: googleAvatar || null,
           }])
           .select()
           .single();
@@ -105,21 +114,36 @@ export default function Profile() {
           console.error('Error creating profile:', insertError);
           // Even if creation fails, continue with empty profile
           setProfile(null);
-          setFullName(user.email?.split('@')[0] || '');
+          setFullName(googleName || user.email?.split('@')[0] || '');
         } else {
           setProfile(newProfile);
-          setFullName(newProfile?.full_name || user.email?.split('@')[0] || '');
+          setFullName(newProfile?.full_name || googleName || user.email?.split('@')[0] || '');
         }
       } else {
         // Profile exists, use it
+        // But also check if Google OAuth name is available and profile name is empty
+        const googleName = user.user_metadata?.full_name || 
+                          user.user_metadata?.name || 
+                          user.user_metadata?.display_name ||
+                          null;
+        
+        if (!data.full_name && googleName) {
+          // Update profile with Google name if profile name is empty
+          setFullName(googleName);
+        } else {
+          setFullName(data?.full_name || googleName || user.email?.split('@')[0] || '');
+        }
         setProfile(data);
-        setFullName(data?.full_name || user.email?.split('@')[0] || '');
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error);
       // Set defaults even on error
+      const googleName = user.user_metadata?.full_name || 
+                        user.user_metadata?.name || 
+                        user.user_metadata?.display_name ||
+                        null;
       setProfile(null);
-      setFullName(user.email?.split('@')[0] || '');
+      setFullName(googleName || user.email?.split('@')[0] || '');
     } finally {
       setLoading(false);
     }
@@ -235,7 +259,14 @@ export default function Profile() {
                
               </div>
               <h3 className="font-semibold text-lg mb-1">
-                {loading ? "Loading..." : profile?.full_name || user?.email?.split('@')[0] || "User"}
+                {loading ? "Loading..." : (
+                  profile?.full_name || 
+                  user?.user_metadata?.full_name || 
+                  user?.user_metadata?.name || 
+                  user?.user_metadata?.display_name ||
+                  user?.email?.split('@')[0] || 
+                  "User"
+                )}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                   {user?.email}

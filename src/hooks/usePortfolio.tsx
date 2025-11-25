@@ -53,13 +53,25 @@ export const usePortfolio = () => {
       setHoldings(data || []);
     } catch (error: any) {
       console.error('Error fetching holdings:', error);
+      
+      // Check for CORS errors
+      const isCorsError = error.message?.includes('CORS') || 
+                         error.message?.includes('Failed to fetch') ||
+                         error.message?.includes('Access-Control-Allow-Origin');
+      
       // Only show toast for actual errors, not timeouts or missing tables
       if (error.message !== 'Request timeout' && !error.message?.includes('does not exist')) {
-        toast({
-          title: "Failed to load portfolio",
-          description: error.message || 'Network error. Please check your connection.',
-          variant: "destructive"
-        });
+        if (isCorsError) {
+          // Log CORS error to console with helpful message
+          console.error('CORS Error: Please configure Supabase Site URL to https://lenstock.netlify.app in Supabase Dashboard → Authentication → URL Configuration');
+          // Don't show toast for CORS - it's a configuration issue, not a user error
+        } else {
+          toast({
+            title: "Failed to load portfolio",
+            description: error.message || 'Network error. Please check your connection.',
+            variant: "destructive"
+          });
+        }
       }
       setHoldings([]);
     } finally {

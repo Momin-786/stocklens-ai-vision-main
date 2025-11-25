@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -51,20 +52,39 @@ const steps = [
 ];
 
 export const Onboarding = () => {
+  const { user, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-      // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-     setIsOpen(true);
-    }, 500);
+    // Only show onboarding if user is logged in and hasn't seen it before
+    if (loading) return;
+    
+    if (!user) {
+      setIsOpen(false);
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, []);
+    // Check if user has already completed onboarding
+    const hasSeenOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+    
+    if (!hasSeenOnboarding) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        setIsOpen(true);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    } else {
+      setIsOpen(false);
+    }
+  }, [user, loading]);
 
   const handleComplete = () => {
-
+    // Mark onboarding as completed for this user
+    if (user) {
+      localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+    }
     setIsOpen(false);
   };
 

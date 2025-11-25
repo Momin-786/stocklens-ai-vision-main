@@ -9,10 +9,11 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
-      // Check for error in URL hash first
+      // Check for error in URL hash or query params
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const error = hashParams.get('error');
-      const errorDescription = hashParams.get('error_description');
+      const queryParams = new URLSearchParams(window.location.search.substring(1));
+      const error = hashParams.get('error') || queryParams.get('error');
+      const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
 
       if (error) {
         console.error('OAuth error in callback:', error, errorDescription);
@@ -25,17 +26,38 @@ const AuthCallback = () => {
         return;
       }
 
-      // Check if we have OAuth tokens in the URL hash
-      const hasAccessToken = hashParams.get('access_token');
-      const hasCode = hashParams.get('code');
+      // Check if we have OAuth tokens in URL (hash or query params)
+      const hasAccessToken = hashParams.get('access_token') || queryParams.get('access_token');
+      const hasCode = hashParams.get('code') || queryParams.get('code');
+      const hasHash = window.location.hash.length > 0;
+      const hasQuery = window.location.search.length > 0;
       
-      console.log('OAuth callback detected:', {
+      console.log('OAuth callback check:', {
         hasAccessToken: !!hasAccessToken,
         hasCode: !!hasCode,
+        hasHash,
+        hasQuery,
         hashLength: window.location.hash.length,
+        queryLength: window.location.search.length,
       });
 
+      // If no tokens and no hash/query, user might have navigated here directly
+      // Check if there's already a session first
+      if (!hasAccessToken && !hasCode && !hasHash && !hasQuery) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Already logged in, redirect to stocks
+          navigate("/stocks");
+          return;
+        }
+        // No session and no OAuth tokens, redirect to auth
+        console.log('No OAuth tokens found, redirecting to auth');
+        navigate("/auth");
+        return;
+      }
+
       // Set up auth state change listener to wait for session
+      // Supabase with detectSessionInUrl: true should automatically process the callback
       let sessionReceived = false;
       let timeoutId: NodeJS.Timeout;
 
@@ -44,12 +66,7 @@ const AuthCallback = () => {
           async (event, session) => {
             console.log('Auth state changed:', event, session ? 'Session received' : 'No session');
             
-            if (event === 'SIGNED_IN' && session) {
-              sessionReceived = true;
-              clearTimeout(timeoutId);
-              subscription.unsubscribe();
-              resolve({ session, error: null });
-            } else if (event === 'TOKEN_REFRESHED' && session) {
+            if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
               sessionReceived = true;
               clearTimeout(timeoutId);
               subscription.unsubscribe();
@@ -58,42 +75,42 @@ const AuthCallback = () => {
           }
         );
 
-        // Also try to get session directly (in case it's already established)
+        // Also check for existing session immediately
         supabase.auth.getSession().then(({ data: { session }, error }) => {
           if (session && !sessionReceived) {
             sessionReceived = true;
             clearTimeout(timeoutId);
             subscription.unsubscribe();
             resolve({ session, error: null });
-          } else if (!session && !hasAccessToken && !hasCode) {
-            // No tokens in URL and no session - likely not an OAuth callback
-            clearTimeout(timeoutId);
-            subscription.unsubscribe();
-            resolve({ session: null, error: new Error('No OAuth tokens found in URL') });
           }
         });
 
-        // Timeout after 10 seconds
+        // Timeout after 15 seconds
         timeoutId = setTimeout(() => {
           if (!sessionReceived) {
             subscription.unsubscribe();
-            resolve({ session: null, error: new Error('Timeout waiting for session') });
+            // Don't treat timeout as error if we have tokens - Supabase might still be processing
+            if (hasAccessToken || hasCode) {
+              resolve({ session: null, error: new Error('Timeout waiting for session - Supabase may still be processing') });
+            } else {
+              resolve({ session: null, error: null }); // No tokens, just redirect
+            }
           }
-        }, 10000);
+        }, 15000);
       });
 
       try {
-        // Wait for session with retry logic
+        // Wait for session - Supabase should process the OAuth callback automatically
         let result = await authStatePromise;
         let attempts = 0;
         const maxAttempts = 3;
 
-        // If no session and we have tokens, retry
+        // If no session but we have tokens, retry (Supabase might still be processing)
         while (!result.session && (hasAccessToken || hasCode) && attempts < maxAttempts) {
           attempts++;
-          console.log(`Retrying session check... (${attempts}/${maxAttempts})`);
+          console.log(`Waiting for Supabase to process OAuth... (${attempts}/${maxAttempts})`);
           
-          // Wait a bit longer for Supabase to process
+          // Wait longer for Supabase to process
           await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
           
           // Try getting session again
@@ -118,7 +135,7 @@ const AuthCallback = () => {
           }
         }
 
-        if (result.error) {
+        if (result.error && result.error.message !== 'Timeout waiting for session - Supabase may still be processing') {
           console.error('Auth callback error:', result.error);
           
           const isConnectionError = result.error.message?.includes('Failed to fetch') ||
@@ -155,13 +172,26 @@ const AuthCallback = () => {
           });
           navigate("/stocks");
         } else {
-          // No session found
-          console.warn('No session found after OAuth callback', {
-            hasAccessToken: !!hasAccessToken,
-            hasCode: !!hasCode,
-            urlHash: window.location.hash.substring(0, 100),
-          });
+          // No session found - might still be processing or failed
+          if (hasAccessToken || hasCode) {
+            console.warn('No session found but OAuth tokens present - may still be processing', {
+              hasAccessToken: !!hasAccessToken,
+              hasCode: !!hasCode,
+            });
+            // Wait a bit more and check one more time
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              toast({
+                title: "Welcome!",
+                description: "You've successfully signed in with Google.",
+              });
+              navigate("/stocks");
+              return;
+            }
+          }
           
+          console.warn('No session found after OAuth callback');
           toast({
             title: "Sign in incomplete",
             description: "Please try signing in again.",
