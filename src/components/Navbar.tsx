@@ -75,9 +75,9 @@ export const Navbar = () => {
           </Link>
 
           {/* Market Status Indicator - Desktop */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/40 border border-border/50 text-xs font-medium">
-            <div className={`h-2 w-2 rounded-full ${marketOpen ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
-            <span className={marketOpen ? "text-success-foreground" : "text-muted-foreground"}>
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-border/50 text-xs font-medium">
+            <div className={`h-2 w-2 rounded-full ${marketOpen ? "bg-success animate-pulse shadow-[0_0_8px_hsl(var(--success))]" : "bg-muted-foreground"}`} />
+            <span className={marketOpen ? "text-success font-semibold" : "text-muted-foreground"}>
               {marketOpen ? "Market Open" : "Market Closed"}
             </span>
           </div>

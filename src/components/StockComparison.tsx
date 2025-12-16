@@ -90,7 +90,7 @@ export const StockComparison = () => {
     setIsSearching(true);
     try {
       const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
-        body: { 
+        body: {
           search: query,
           limit: 20
         }
@@ -197,7 +197,7 @@ export const StockComparison = () => {
 
     // Check if stock is in available stocks first
     const availableStock = availableStocks?.find(s => s.symbol === symbol);
-    
+
     if (availableStock) {
       // Use available stock data
       const newStock: StockWithInsights = {
@@ -214,10 +214,10 @@ export const StockComparison = () => {
         fetchAIInsights(newStock),
         fetchChartData(symbol)
       ]);
-      
-      setSelectedStocks(prev => 
-        prev.map(s => 
-          s.symbol === symbol 
+
+      setSelectedStocks(prev =>
+        prev.map(s =>
+          s.symbol === symbol
             ? { ...s, aiInsights: insights, chartData, loading: false }
             : s
         )
@@ -225,7 +225,7 @@ export const StockComparison = () => {
     } else {
       // Fetch stock data from API
       const stockData = await fetchStockData(symbol);
-      
+
       if (!stockData) {
         toast.error(`Failed to fetch data for ${symbol}`);
         return;
@@ -246,10 +246,10 @@ export const StockComparison = () => {
         fetchAIInsights(newStock),
         fetchChartData(symbol)
       ]);
-      
-      setSelectedStocks(prev => 
-        prev.map(s => 
-          s.symbol === symbol 
+
+      setSelectedStocks(prev =>
+        prev.map(s =>
+          s.symbol === symbol
             ? { ...s, aiInsights: insights, chartData, loading: false }
             : s
         )
@@ -259,10 +259,10 @@ export const StockComparison = () => {
 
   const addStock = async () => {
     if (!selectedSymbol) return;
-    
+
     // Check if it's from available stocks
     const stock = availableStocks?.find(s => s.symbol === selectedSymbol);
-    
+
     if (stock) {
       if (selectedStocks.some(s => s.symbol === selectedSymbol)) {
         toast.error("Stock already added to comparison");
@@ -283,10 +283,10 @@ export const StockComparison = () => {
         fetchAIInsights(stock),
         fetchChartData(stock.symbol)
       ]);
-      
-      setSelectedStocks(prev => 
-        prev.map(s => 
-          s.symbol === stock.symbol 
+
+      setSelectedStocks(prev =>
+        prev.map(s =>
+          s.symbol === stock.symbol
             ? { ...s, aiInsights: insights, chartData, loading: false }
             : s
         )
@@ -368,7 +368,7 @@ export const StockComparison = () => {
               {isSearching && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
               )}
-              
+
               {/* Search Results Dropdown */}
               {showSearchResults && searchResults.length > 0 && (
                 <Card className="absolute top-full left-0 right-0 mt-2 z-50 max-h-96 overflow-y-auto">
@@ -398,7 +398,7 @@ export const StockComparison = () => {
                   </div>
                 </Card>
               )}
-              
+
               {showSearchResults && searchQuery && searchResults.length === 0 && !isSearching && (
                 <Card className="absolute top-full left-0 right-0 mt-2 z-50 p-4">
                   <p className="text-sm text-muted-foreground text-center">
@@ -407,8 +407,8 @@ export const StockComparison = () => {
                 </Card>
               )}
             </div>
-            <Button 
-              onClick={addStock} 
+            <Button
+              onClick={addStock}
               disabled={!selectedSymbol || isSearching}
               className="bg-secondary hover:bg-secondary/90"
             >
@@ -416,7 +416,7 @@ export const StockComparison = () => {
               Add Stock
             </Button>
           </div>
-          
+
           {/* Quick select from available stocks */}
           {availableStocks && availableStocks.length > 0 && !searchQuery && (
             <div className="flex flex-wrap gap-2">
@@ -486,9 +486,8 @@ export const StockComparison = () => {
                 <p className="text-sm text-muted-foreground">{stock.name}</p>
                 <p className="text-3xl font-bold mt-2">${stock.price}</p>
                 <p
-                  className={`text-sm ${
-                    stock.change >= 0 ? "text-success" : "text-destructive"
-                  }`}
+                  className={`text-sm ${stock.change >= 0 ? "text-success" : "text-destructive"
+                    }`}
                 >
                   {stock.change >= 0 ? "+" : ""}${stock.change} Today
                 </p>
@@ -500,9 +499,9 @@ export const StockComparison = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={stock.chartData}>
                       <YAxis hide domain={['dataMin - 2', 'dataMax + 2']} />
-                      <Line 
-                        type="monotone" 
-                        dataKey="close" 
+                      <Line
+                        type="monotone"
+                        dataKey="close"
                         stroke={stock.change >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"}
                         strokeWidth={2}
                         dot={false}
@@ -522,13 +521,12 @@ export const StockComparison = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Target
-                        className={`h-4 w-4 ${
-                          stock.aiInsights.signal === "BUY"
-                            ? "text-success"
-                            : stock.aiInsights.signal === "HOLD"
+                        className={`h-4 w-4 ${stock.aiInsights.signal === "BUY"
+                          ? "text-success"
+                          : stock.aiInsights.signal === "HOLD"
                             ? "text-warning"
                             : "text-destructive"
-                        }`}
+                          }`}
                       />
                       <span className="font-semibold">AI Prediction</span>
                     </div>
@@ -543,37 +541,45 @@ export const StockComparison = () => {
                   </div>
 
                   <div
-                    className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${
-                      stock.aiInsights.signal === "BUY"
-                        ? "bg-success/20 text-success"
-                        : stock.aiInsights.signal === "HOLD"
+                    className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${stock.aiInsights.signal === "BUY"
+                      ? "bg-success/20 text-success"
+                      : stock.aiInsights.signal === "HOLD"
                         ? "bg-warning/20 text-warning"
                         : "bg-destructive/20 text-destructive"
-                    }`}
+                      }`}
                   >
                     {stock.aiInsights.signal}
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">
-                        Confidence
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Confidence Score
                       </span>
-                      <span className="text-xs font-semibold">
-                        {Math.round(stock.aiInsights.confidence)}%
+                      <span className="text-xs font-bold">
+                        {Math.round(stock.aiInsights.confidence || 0)}%
                       </span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-3 relative bg-secondary/10 rounded-full overflow-hidden border border-border/50">
                       <div
-                        className={`h-full ${
-                          stock.aiInsights.signal === "BUY"
-                            ? "bg-success"
-                            : stock.aiInsights.signal === "HOLD"
-                            ? "bg-warning"
-                            : "bg-destructive"
-                        }`}
-                        style={{ width: `${stock.aiInsights.confidence}%` }}
+                        className={`absolute left-0 top-0 h-full transition-all duration-1000 ease-out rounded-full ${stock.aiInsights.signal === "BUY"
+                          ? "bg-gradient-to-r from-success/50 to-success"
+                          : stock.aiInsights.signal === "HOLD"
+                            ? "bg-gradient-to-r from-warning/50 to-warning"
+                            : "bg-gradient-to-r from-destructive/50 to-destructive"
+                          }`}
+                        style={{ width: `${Math.max(5, stock.aiInsights.confidence || 0)}%` }}
                       />
+                      {/* Scale ticks */}
+                      <div className="absolute inset-0 pointer-events-none">
+                        {[0, 25, 50, 75, 100].map(tick => (
+                          <div
+                            key={tick}
+                            className="absolute top-0 bottom-0 w-px bg-background/30 z-10"
+                            style={{ left: `${tick}%` }}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -593,8 +599,8 @@ export const StockComparison = () => {
                               stock.aiInsights!.signal === "BUY"
                                 ? "text-success"
                                 : stock.aiInsights!.signal === "HOLD"
-                                ? "text-warning"
-                                : "text-destructive"
+                                  ? "text-warning"
+                                  : "text-destructive"
                             }
                           >
                             {stock.aiInsights!.signal === "BUY" ? "✓" : stock.aiInsights!.signal === "HOLD" ? "●" : "⚠"}
