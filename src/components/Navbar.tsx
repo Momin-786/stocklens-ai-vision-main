@@ -71,6 +71,87 @@ export const Navbar = () => {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 shadow-sm">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
+          {/* Mobile Navigation */}
+          <div className="md:hidden flex items-center">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="-ml-2">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-secondary/10">
+                      <TrendingUp className="h-5 w-5 text-secondary" />
+                    </div>
+                    <span className="font-heading font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                      StockLens
+                    </span>
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-4 mt-8">
+                  {!user && (
+                    <Link
+                      to="/"
+                      className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/")
+                        ? "text-secondary bg-secondary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        }`}
+                    >
+                      Home
+                    </Link>
+                  )}
+                  <Link
+                    to="/stocks"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/stocks")
+                      ? "text-secondary bg-secondary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                  >
+                    Stocks
+                  </Link>
+                  <Link
+                    to="/comparison"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/comparison")
+                      ? "text-secondary bg-secondary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                  >
+                    Compare
+                  </Link>
+                  <Link
+                    to="/analysis"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/analysis")
+                      ? "text-secondary bg-secondary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                  >
+                    Analysis
+                  </Link>
+                  <Link
+                    to="/portfolio"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/portfolio")
+                      ? "text-secondary bg-secondary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                  >
+                    Portfolio
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/profile")
+                      ? "text-secondary bg-secondary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                  >
+                    Profile
+                  </Link>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
           <Link to={user ? "/stocks" : "/"} className="flex items-center gap-2 hover-scale group">
             <div className="p-1.5 rounded-lg bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
               <TrendingUp className="h-5 w-5 text-secondary" />
@@ -91,86 +172,7 @@ export const Navbar = () => {
 
 
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden flex items-center">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-secondary/10">
-                    <TrendingUp className="h-5 w-5 text-secondary" />
-                  </div>
-                  <span className="font-heading font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                    StockLens
-                  </span>
-                </SheetTitle>
-              </SheetHeader>
-              <div className="flex flex-col gap-4 mt-8">
-                {!user && (
-                  <Link
-                    to="/"
-                    className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/")
-                      ? "text-secondary bg-secondary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                      }`}
-                  >
-                    Home
-                  </Link>
-                )}
-                <Link
-                  to="/stocks"
-                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/stocks")
-                    ? "text-secondary bg-secondary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                  Stocks
-                </Link>
-                <Link
-                  to="/comparison"
-                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/comparison")
-                    ? "text-secondary bg-secondary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                  Compare
-                </Link>
-                <Link
-                  to="/analysis"
-                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/analysis")
-                    ? "text-secondary bg-secondary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                  Analysis
-                </Link>
-                <Link
-                  to="/portfolio"
-                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/portfolio")
-                    ? "text-secondary bg-secondary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                  Portfolio
-                </Link>
-                <Link
-                  to="/profile"
-                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/profile")
-                    ? "text-secondary bg-secondary/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                  Profile
-                </Link>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
+
 
         <div className="hidden md:flex items-center gap-1">
           {!user && (
