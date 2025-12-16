@@ -657,13 +657,13 @@ export default function Analysis() {
             {/* AI Prediction Card */}
             <Card className={`p-6 animate-scale-in border-2 ${aiInsights?.signal === "BUY" ? "border-success" :
               aiInsights?.signal === "SELL" ? "border-destructive" :
-                "border-secondary" // HOLD or others
+                "border-warning" // HOLD or others
               }`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Target className={`h-5 w-5 ${aiInsights?.signal === "BUY" ? "text-success" :
                     aiInsights?.signal === "SELL" ? "text-destructive" :
-                      "text-secondary"
+                      "text-warning"
                     }`} />
                   <div className="flex items-center gap-1.5">
                     <h2 className="text-lg font-semibold">AI Prediction</h2>
@@ -713,20 +713,20 @@ export default function Analysis() {
                     {/* Signal Circle */}
                     <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-4 mb-3 ${aiInsights?.signal === "BUY" ? "bg-success/20 border-success" :
                       aiInsights?.signal === "SELL" ? "bg-destructive/20 border-destructive" :
-                        "bg-secondary/20 border-secondary"
+                        "bg-warning/20 border-warning"
                       }`}>
                       {aiInsights?.signal === "BUY" ? (
                         <TrendingUp className="h-10 w-10 text-success" />
                       ) : aiInsights?.signal === "SELL" ? (
                         <TrendingDown className="h-10 w-10 text-destructive" />
                       ) : (
-                        <Activity className="h-10 w-10 text-secondary" />
+                        <Activity className="h-10 w-10 text-warning" />
                       )}
                     </div>
 
                     <h3 className={`text-3xl font-bold mb-2 ${aiInsights?.signal === "BUY" ? "text-success" :
                       aiInsights?.signal === "SELL" ? "text-destructive" :
-                        "text-secondary"
+                        "text-warning"
                       }`}>
                       {aiInsights?.signal || "NEUTRAL"}
                     </h3>
@@ -737,7 +737,7 @@ export default function Analysis() {
                         <div
                           className={`absolute left-0 top-0 h-full transition-all duration-1000 ease-out rounded-full ${aiInsights?.signal === "BUY" ? "bg-gradient-to-r from-success/50 to-success" :
                             aiInsights?.signal === "SELL" ? "bg-gradient-to-r from-destructive/50 to-destructive" :
-                              "bg-gradient-to-r from-secondary/50 to-secondary"
+                              "bg-gradient-to-r from-warning/50 to-warning"
                             }`}
                           style={{ width: `${aiInsights?.confidence || 0}%` }}
                         />
@@ -786,7 +786,7 @@ export default function Analysis() {
                           <li key={i} className="text-xs flex gap-2 items-start">
                             <span className={`mt-0.5 ${aiInsights?.signal === "BUY" ? "text-success" :
                               aiInsights?.signal === "SELL" ? "text-destructive" :
-                                "text-secondary"
+                                "text-warning"
                               }`}>
                               ●
                             </span>
