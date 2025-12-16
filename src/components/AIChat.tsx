@@ -49,7 +49,7 @@ export const AIChat = () => {
     };
   }, []);
 
- 
+
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -83,7 +83,7 @@ export const AIChat = () => {
 
       // Try streaming first, fallback to regular if not supported
       const useStreaming = false; // Set to true when streaming is fully tested
-      
+
       if (useStreaming) {
         // Streaming implementation would go here
         // For now, use regular non-streaming approach
@@ -128,19 +128,37 @@ export const AIChat = () => {
           return updated;
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in AI chat:', error);
-      toast.error('Failed to get AI response');
-      
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[messageIndex] = {
-          role: "assistant",
-          content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
-          timestamp: new Date(),
-        };
-        return updated;
-      });
+
+      // Check for rate limit error
+      const isRateLimit = error?.message?.includes('429') ||
+        error?.message?.includes('Too Many Requests') ||
+        error?.status === 429;
+
+      if (isRateLimit) {
+        toast.error('Rate limit reached. Please wait a moment and try again.');
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[messageIndex] = {
+            role: "assistant",
+            content: "⏳ **Rate limit reached.** The AI service is temporarily limiting requests. Please wait 30-60 seconds before trying again.\n\n*Tip: Gemini free tier has usage limits per minute.*",
+            timestamp: new Date(),
+          };
+          return updated;
+        });
+      } else {
+        toast.error('Failed to get AI response');
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[messageIndex] = {
+            role: "assistant",
+            content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+            timestamp: new Date(),
+          };
+          return updated;
+        });
+      }
     } finally {
       setIsTyping(false);
     }
@@ -150,17 +168,17 @@ export const AIChat = () => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-      }
+    }
   };
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
-      
+
       audioChunksRef.current = [];
       setRecordingTime(0);
-      
+
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
@@ -170,25 +188,25 @@ export const AIChat = () => {
       recorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         stream.getTracks().forEach(track => track.stop());
-        
+
         // Stop timer
         if (recordingTimerRef.current) {
           clearInterval(recordingTimerRef.current);
           recordingTimerRef.current = null;
         }
-        
+
         await transcribeAudio(audioBlob);
       };
 
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
-      
+
       // Start recording timer
       recordingTimerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
-      
+
       toast.success("Recording started - speak now");
     } catch (error) {
       console.error('Error accessing microphone:', error);
@@ -207,7 +225,7 @@ export const AIChat = () => {
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
       setIsTranscribing(true);
-      
+
       // Check audio size (AssemblyAI has limits)
       const maxSize = 25 * 1024 * 1024; // 25MB limit
       if (audioBlob.size > maxSize) {
@@ -218,15 +236,15 @@ export const AIChat = () => {
 
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
-      
+
       reader.onloadend = async () => {
         try {
           const base64Audio = (reader.result as string).split(',')[1];
-          
+
           if (!base64Audio) {
             throw new Error('Failed to encode audio data');
           }
-          
+
           const { data, error } = await supabase.functions.invoke('voice-to-text', {
             body: { audio: base64Audio }
           });
@@ -323,16 +341,14 @@ export const AIChat = () => {
               {messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`flex ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  } animate-fade-in`}
+                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"
+                    } animate-fade-in`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      message.role === "user"
+                    className={`max-w-[80%] rounded-lg p-3 ${message.role === "user"
                         ? "bg-secondary text-secondary-foreground"
                         : "bg-muted"
-                    }`}
+                      }`}
                   >
                     {message.role === "assistant" ? (
                       <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-headings:mt-2 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:font-semibold prose-code:text-xs prose-code:bg-muted-foreground/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
@@ -435,7 +451,7 @@ export const AIChat = () => {
                     </Button>
                   </div>
                 )}
-                
+
                 {isTranscribing && (
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/10 border border-secondary/20">
                     <Loader2 className="h-4 w-4 text-secondary animate-spin" />
@@ -447,7 +463,7 @@ export const AIChat = () => {
                 )}
               </div>
             )}
-            
+
             <div className="flex gap-2">
               <Button
                 variant={isRecording ? "destructive" : isTranscribing ? "outline" : "outline"}
@@ -467,11 +483,11 @@ export const AIChat = () => {
               </Button>
               <Input
                 placeholder={
-                  isRecording 
-                    ? "Listening... Click stop when done" 
-                    : isTranscribing 
-                    ? "Transcribing your voice..." 
-                    : "Ask me anything..."
+                  isRecording
+                    ? "Listening... Click stop when done"
+                    : isTranscribing
+                      ? "Transcribing your voice..."
+                      : "Ask me anything..."
                 }
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

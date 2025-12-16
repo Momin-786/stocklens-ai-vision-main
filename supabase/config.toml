@@ -1,4 +1,4 @@
-project_id = "kgfxsxwkdbtvkanopeuf"
+project_id = "fkxfbydkfhqbpcrdklxn"
 
 [functions.fetch-stock-data]
 verify_jwt = false

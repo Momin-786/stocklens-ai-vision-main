@@ -73,8 +73,8 @@ Example for RSI explanation:
 
     // Use streaming endpoint if requested
     const apiUrl = stream
-      ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:streamGenerateContent?key=${GEMINI_API_KEY}`
-      : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
+      ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?key=${GEMINI_API_KEY}`
+      : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -96,14 +96,14 @@ Example for RSI explanation:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI API error:', response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ error: 'AI credits depleted. Please add credits to continue.' }),
@@ -168,7 +168,7 @@ Example for RSI explanation:
       const data = await response.json();
       const aiMessage =
         data.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || '';
-      
+
       console.log('AI chat response generated successfully');
 
       return new Response(
@@ -179,7 +179,7 @@ Example for RSI explanation:
   } catch (error) {
     console.error('Error in stock-chat:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error instanceof Error ? error.message : 'Failed to generate response',
         message: 'I apologize, but I encountered an error. Please try again.'
       }),
