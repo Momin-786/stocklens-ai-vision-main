@@ -121,11 +121,10 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       {/* Top Navigation Bar */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
             ? "bg-background/95 backdrop-blur-md border-b border-border/40 shadow-lg"
             : "bg-transparent"
-        }`}
+          }`}
       >
         <nav className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
           <Link to="/" className="flex items-center gap-2 hover-scale group">
@@ -142,7 +141,7 @@ export default function Landing() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="hidden sm:inline-flex hover:bg-muted/50"
+                className="hidden sm:inline-flex hover:bg-muted/50 dark:hover:bg-secondary/20 dark:hover:text-secondary transition-colors"
               >
                 Sign In
               </Button>
@@ -182,7 +181,7 @@ export default function Landing() {
             style={{ animationDelay: "2s" }}
           />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl animate-pulse" />
-          
+
           {/* Animated Grid Pattern */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-40" />
         </div>
@@ -243,7 +242,7 @@ export default function Landing() {
               <Link to="/auth" className="w-full sm:w-auto group">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto bg-secondary hover:bg-secondary/90 text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-6 shadow-xl hover:shadow-2xl transition-all hover-scale group relative overflow-hidden"
+                  className="w-full sm:w-auto bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-6 shadow-xl hover:shadow-2xl transition-all hover-scale group relative overflow-hidden"
                 >
                   <span className="relative z-10 flex items-center">
                     Get Started Free
@@ -256,7 +255,7 @@ export default function Landing() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-6 border-2 hover:bg-secondary/10 hover:border-secondary transition-all group"
+                  className="w-full sm:w-auto text-base sm:text-lg px-8 sm:px-10 py-5 sm:py-6 border-2 hover:bg-secondary/10 hover:border-secondary dark:hover:bg-secondary/20 dark:hover:text-secondary transition-all group"
                 >
                   <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
                   View Live Stocks
@@ -512,7 +511,7 @@ export default function Landing() {
               <Link to="/auth" className="w-full sm:w-auto group">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto bg-secondary hover:bg-secondary/90 text-base sm:text-lg px-10 sm:px-12 py-6 sm:py-7 shadow-2xl hover:shadow-secondary/20 transition-all hover-scale group relative overflow-hidden"
+                  className="w-full sm:w-auto bg-secondary text-secondary-foreground hover:bg-secondary/90 text-base sm:text-lg px-10 sm:px-12 py-6 sm:py-7 shadow-2xl hover:shadow-secondary/20 transition-all hover-scale group relative overflow-hidden"
                 >
                   <span className="relative z-10 flex items-center">
                     Get Started Free
