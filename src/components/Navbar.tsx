@@ -1,11 +1,17 @@
-/* eslint-disable react-hooks/rules-of-hooks */
-import { Moon, Sun, TrendingUp, FlaskConical, LogOut } from "lucide-react";
+import { Moon, Sun, TrendingUp, FlaskConical, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 export const Navbar = () => {
   const location = useLocation();
@@ -81,6 +87,89 @@ export const Navbar = () => {
               {marketOpen ? "Market Open" : "Market Closed"}
             </span>
           </div>
+        </div>
+
+
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden flex items-center">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-secondary/10">
+                    <TrendingUp className="h-5 w-5 text-secondary" />
+                  </div>
+                  <span className="font-heading font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    StockLens
+                  </span>
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col gap-4 mt-8">
+                {!user && (
+                  <Link
+                    to="/"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/")
+                      ? "text-secondary bg-secondary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                  >
+                    Home
+                  </Link>
+                )}
+                <Link
+                  to="/stocks"
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/stocks")
+                    ? "text-secondary bg-secondary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                >
+                  Stocks
+                </Link>
+                <Link
+                  to="/comparison"
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/comparison")
+                    ? "text-secondary bg-secondary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                >
+                  Compare
+                </Link>
+                <Link
+                  to="/analysis"
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/analysis")
+                    ? "text-secondary bg-secondary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                >
+                  Analysis
+                </Link>
+                <Link
+                  to="/portfolio"
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/portfolio")
+                    ? "text-secondary bg-secondary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                >
+                  Portfolio
+                </Link>
+                <Link
+                  to="/profile"
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${isActive("/profile")
+                    ? "text-secondary bg-secondary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                >
+                  Profile
+                </Link>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
 
         <div className="hidden md:flex items-center gap-1">
