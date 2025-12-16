@@ -156,7 +156,7 @@ export const Navbar = () => {
             size="icon"
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="hover:bg-muted/50"
+            className="hover:bg-secondary/20 hover:text-foreground transition-colors"
           >
             {theme === "light" ? (
               <Moon className="h-5 w-5" />
@@ -171,7 +171,7 @@ export const Navbar = () => {
                 variant="outline"
                 size="sm"
                 onClick={signOut}
-                className="gap-2 hover:bg-muted/50 border-2"
+                className="gap-2 hover:bg-secondary/20 hover:text-foreground border-2 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Sign Out</span>
@@ -182,7 +182,7 @@ export const Navbar = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="hidden sm:inline-flex border-2 hover:bg-muted/50"
+                className="hidden sm:inline-flex border-2 hover:bg-secondary/20 hover:text-foreground transition-colors"
                 onClick={() => navigate("/auth")}
               >
                 Login
