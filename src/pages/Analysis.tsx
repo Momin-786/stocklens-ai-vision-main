@@ -24,8 +24,15 @@ import { RiskDisclaimer } from "@/components/RiskDisclaimer";
 import { useStockData } from "@/hooks/useStockData";
 import { supabase } from "@/integrations/supabase/client";
 import { AIChat } from "@/components/AIChat";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import { StockSelector } from "@/components/StockSelector";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 // Helper function to get stock name
 const getStockName = (symbol: string): string => {
@@ -494,7 +501,7 @@ export default function Analysis() {
                         fontSize={12}
                         tickFormatter={(value) => `$${value}`}
                       />
-                      <Tooltip
+                      <ChartTooltip
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
@@ -502,7 +509,7 @@ export default function Analysis() {
                         }}
                         labelStyle={{ color: 'hsl(var(--foreground))' }}
                         formatter={(value: any) => [`$${value}`, 'Price']}
-                        labelFormatter={(date) => new Date(date).toLocaleString()}
+                        labelFormatter={(date: any) => new Date(date).toLocaleString()}
                       />
                       <Line
                         type="monotone"
@@ -519,15 +526,27 @@ export default function Analysis() {
 
               <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t">
                 <div>
-                  <p className="text-sm text-muted-foreground">Volume</p>
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-1">
+                    Volume
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3.5 w-3.5" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-[200px] text-xs">The total number of shares traded today. Higher volume often indicates higher interest.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <p className="text-lg font-semibold">{stock.volume || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Category</p>
+                  <p className="text-sm text-muted-foreground mb-1">Category</p>
                   <p className="text-lg font-semibold capitalize">{stock.category}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Change</p>
+                  <p className="text-sm text-muted-foreground mb-1">Change</p>
                   <p className={`text-lg font-semibold ${stock.change >= 0 ? "text-success" : "text-destructive"}`}>
                     {stock.change >= 0 ? "+" : ""}{stock.change}
                   </p>
@@ -555,7 +574,24 @@ export default function Analysis() {
                       key={i}
                       className="flex items-center justify-between p-3 bg-muted/30 rounded"
                     >
-                      <span className="font-medium">{indicator.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{indicator.label}</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-3.5 w-3.5 text-muted-foreground/70" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[200px] text-xs">
+                                {indicator.label.includes("RSI") ? "Relative Strength Index. <30 is oversold (good to buy), >70 is overbought (good to sell)." :
+                                  indicator.label.includes("MACD") ? "Momentum indicator. Positive values signal upward momentum." :
+                                    indicator.label.includes("MA") ? "Moving Average. Shows the average price over a specific period to identify trends." :
+                                      "Technical indicator analyzing price trends."}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <div className="flex items-center gap-3">
                         <span className="text-muted-foreground">
                           {indicator.value}
@@ -590,16 +626,28 @@ export default function Analysis() {
           <div className="lg:col-span-1 space-y-6">
             {/* AI Prediction Card */}
             <Card className={`p-6 animate-scale-in border-2 ${aiInsights?.signal === "BUY" ? "border-success" :
-                aiInsights?.signal === "SELL" ? "border-destructive" :
-                  "border-secondary" // HOLD or others
+              aiInsights?.signal === "SELL" ? "border-destructive" :
+                "border-secondary" // HOLD or others
               }`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Target className={`h-5 w-5 ${aiInsights?.signal === "BUY" ? "text-success" :
-                      aiInsights?.signal === "SELL" ? "text-destructive" :
-                        "text-secondary"
+                    aiInsights?.signal === "SELL" ? "text-destructive" :
+                      "text-secondary"
                     }`} />
-                  <h2 className="text-lg font-semibold">AI Prediction</h2>
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="text-lg font-semibold">AI Prediction</h2>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-[200px] text-xs">AI-generated analysis based on technical indicators aiming to predict future price movement.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
                 <Button
                   size="sm"
@@ -624,8 +672,8 @@ export default function Analysis() {
                   <div className="text-center mb-6 relative">
                     {/* Signal Circle */}
                     <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-4 mb-3 ${aiInsights?.signal === "BUY" ? "bg-success/20 border-success" :
-                        aiInsights?.signal === "SELL" ? "bg-destructive/20 border-destructive" :
-                          "bg-secondary/20 border-secondary"
+                      aiInsights?.signal === "SELL" ? "bg-destructive/20 border-destructive" :
+                        "bg-secondary/20 border-secondary"
                       }`}>
                       {aiInsights?.signal === "BUY" ? (
                         <TrendingUp className="h-10 w-10 text-success" />
@@ -637,8 +685,8 @@ export default function Analysis() {
                     </div>
 
                     <h3 className={`text-3xl font-bold mb-2 ${aiInsights?.signal === "BUY" ? "text-success" :
-                        aiInsights?.signal === "SELL" ? "text-destructive" :
-                          "text-secondary"
+                      aiInsights?.signal === "SELL" ? "text-destructive" :
+                        "text-secondary"
                       }`}>
                       {aiInsights?.signal || "NEUTRAL"}
                     </h3>
@@ -648,8 +696,8 @@ export default function Analysis() {
                       <div className="relative w-full h-4 bg-muted/50 rounded-full overflow-hidden">
                         <div
                           className={`absolute left-0 top-0 h-full transition-all duration-1000 ease-out rounded-full ${aiInsights?.signal === "BUY" ? "bg-gradient-to-r from-success/50 to-success" :
-                              aiInsights?.signal === "SELL" ? "bg-gradient-to-r from-destructive/50 to-destructive" :
-                                "bg-gradient-to-r from-secondary/50 to-secondary"
+                            aiInsights?.signal === "SELL" ? "bg-gradient-to-r from-destructive/50 to-destructive" :
+                              "bg-gradient-to-r from-secondary/50 to-secondary"
                             }`}
                           style={{ width: `${aiInsights?.confidence || 0}%` }}
                         />
@@ -662,10 +710,20 @@ export default function Analysis() {
                       </div>
                       <div className="flex justify-between w-full mt-1 text-xs text-muted-foreground font-medium">
                         <span>Low Confidence</span>
-                        <span className={`${aiInsights?.confidence > 80 ? "font-bold text-foreground" : ""
-                          }`}>
-                          {Math.round(aiInsights?.confidence || 0)}% Score
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span className={`flex items-center gap-1 cursor-help ${aiInsights?.confidence > 80 ? "font-bold text-foreground" : ""
+                                }`}>
+                                {Math.round(aiInsights?.confidence || 0)}% Score
+                                <Info className="h-3 w-3" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[200px] text-xs">Indicates the AI's certainty based on pattern strength and data consistency.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <span>High Confidence</span>
                       </div>
                     </div>
@@ -687,8 +745,8 @@ export default function Analysis() {
                         {(aiInsights?.keyFactors || []).map((factor: string, i: number) => (
                           <li key={i} className="text-xs flex gap-2 items-start">
                             <span className={`mt-0.5 ${aiInsights?.signal === "BUY" ? "text-success" :
-                                aiInsights?.signal === "SELL" ? "text-destructive" :
-                                  "text-secondary"
+                              aiInsights?.signal === "SELL" ? "text-destructive" :
+                                "text-secondary"
                               }`}>
                               ●
                             </span>
@@ -744,8 +802,20 @@ export default function Analysis() {
                   <span className="text-muted-foreground">Avg Volume</span>
                   <span className="font-medium">48.2M</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">P/E Ratio</span>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    P/E Ratio
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-[200px] text-xs">Price-to-Earnings Ratio. A higher ratio means the stock is more expensive relative to its earnings.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <span className="font-medium">29.4</span>
                 </div>
               </div>
