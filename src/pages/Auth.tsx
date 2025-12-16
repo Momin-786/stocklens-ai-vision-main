@@ -54,32 +54,32 @@ const Auth = () => {
     }
 
     // Test connection on mount (non-blocking)
-      // Only show warnings for actual issues, not Netlify CORS false positives
-      const testConnection = async () => {
-        const { testSupabaseConnection } = await import('@/utils/supabaseCheck');
-        const result = await testSupabaseConnection();
-        
-        // Only show warning if it's a real issue (not skipped or Netlify CORS)
-        if (!result.connected && !result.skipped && !result.isNetlifyIssue) {
-          if (result.isPaused) {
-            console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
-            toast({
-              title: "Supabase Connection Issue",
-              description: result.suggestion || "Your Supabase project might be paused. Check the dashboard.",
-              variant: "destructive",
-              duration: 10000,
-            });
-          }
-        } else if (result.isNetlifyIssue) {
-          // Netlify-specific issue - only log to console, don't show to user
-          console.warn('⚠️ Netlify connection issue detected (console only):', result);
-          // Don't show toast to user - these are usually false positives
+    // Only show warnings for actual issues, not Netlify CORS false positives
+    const testConnection = async () => {
+      const { testSupabaseConnection } = await import('@/utils/supabaseCheck');
+      const result = await testSupabaseConnection();
+
+      // Only show warning if it's a real issue (not skipped or Netlify CORS)
+      if (!result.connected && !result.skipped && !result.isNetlifyIssue) {
+        if (result.isPaused) {
+          console.warn('⚠️ Supabase connection test failed - Project might be paused:', result);
+          toast({
+            title: "Supabase Connection Issue",
+            description: result.suggestion || "Your Supabase project might be paused. Check the dashboard.",
+            variant: "destructive",
+            duration: 10000,
+          });
         }
+      } else if (result.isNetlifyIssue) {
+        // Netlify-specific issue - only log to console, don't show to user
+        console.warn('⚠️ Netlify connection issue detected (console only):', result);
+        // Don't show toast to user - these are usually false positives
+      }
     };
-    
+
     testConnection().catch(console.error);
 
-   
+
 
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -121,29 +121,29 @@ const Auth = () => {
       // Check if Supabase is configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
+
       if (!supabaseUrl || !supabaseKey) {
         const isProduction = import.meta.env.PROD;
         const errorMsg = isProduction
           ? 'Environment variables missing in Netlify. Go to Netlify → Site Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
           : 'Environment variables missing. Check your .env.local file.';
-        
+
         toast({
           title: "Configuration Error",
           description: errorMsg,
           variant: "destructive",
           duration: 15000,
         });
-        
+
         console.error('❌ Missing Supabase environment variables:', {
           hasUrl: !!supabaseUrl,
           hasKey: !!supabaseKey,
           isProduction,
-          fix: isProduction 
+          fix: isProduction
             ? 'Add env vars in Netlify Dashboard → Site Settings → Environment Variables → Redeploy'
             : 'Add to .env.local file',
         });
-        
+
         throw new Error(errorMsg);
       }
 
@@ -151,7 +151,7 @@ const Auth = () => {
       const redirectUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
       // Remove trailing slash if present, we'll add it in emailRedirectTo
       const cleanRedirectUrl = redirectUrl.replace(/\/$/, '');
-      
+
       console.log('Attempting signup with:', {
         email,
         redirectUrl: cleanRedirectUrl,
@@ -161,12 +161,12 @@ const Auth = () => {
         currentOrigin: window.location.origin,
         viteSiteUrl: import.meta.env.VITE_SITE_URL,
       });
-      
+
       // Retry logic for connection issues
       let lastError: any = null;
       let attempts = 0;
       const maxAttempts = 2;
-      
+
       while (attempts < maxAttempts) {
         try {
           const { data, error } = await supabase.auth.signUp({
@@ -179,7 +179,7 @@ const Auth = () => {
               },
             },
           });
-          
+
           // If successful, break out of retry loop
           if (!error) {
             console.log('Signup successful on attempt', attempts + 1);
@@ -190,7 +190,7 @@ const Auth = () => {
             });
             return; // Exit function on success
           }
-          
+
           // Log full error details for debugging
           console.error('Signup error details:', {
             message: error.message,
@@ -199,7 +199,7 @@ const Auth = () => {
             error: error,
             fullError: JSON.stringify(error, null, 2),
           });
-          
+
           // Also log to window for easy debugging in production
           if (typeof window !== 'undefined') {
             (window as any).__LAST_SIGNUP_ERROR__ = {
@@ -210,19 +210,19 @@ const Auth = () => {
               timestamp: new Date().toISOString(),
             };
           }
-          
+
           // If error is not a connection error, don't retry
-          if (!error.message.includes("Failed to fetch") && 
-              !error.message.includes("network") && 
-              !error.message.includes("connection") &&
-              !error.message.includes("ERR_CONNECTION_RESET")) {
+          if (!error.message.includes("Failed to fetch") &&
+            !error.message.includes("network") &&
+            !error.message.includes("connection") &&
+            !error.message.includes("ERR_CONNECTION_RESET")) {
             lastError = error;
             break; // Exit retry loop for non-connection errors
           }
-          
+
           lastError = error;
           attempts++;
-          
+
           if (attempts < maxAttempts) {
             console.log(`Retry attempt ${attempts + 1}/${maxAttempts} after connection error...`);
             await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
@@ -230,10 +230,10 @@ const Auth = () => {
         } catch (err: any) {
           lastError = err;
           attempts++;
-          
+
           if (attempts < maxAttempts && (
-            err.message?.includes("Failed to fetch") || 
-            err.message?.includes("network") || 
+            err.message?.includes("Failed to fetch") ||
+            err.message?.includes("network") ||
             err.message?.includes("connection") ||
             err.message?.includes("ERR_CONNECTION_RESET")
           )) {
@@ -244,7 +244,7 @@ const Auth = () => {
           }
         }
       }
-      
+
       // Handle error after retries
       const error = lastError;
 
@@ -258,7 +258,7 @@ const Auth = () => {
           redirectUrl: cleanRedirectUrl,
           supabaseUrl: supabaseUrl,
         });
-        
+
         // Handle specific error cases
         if (error.message?.includes("already registered") || error.message?.includes("already been registered")) {
           toast({
@@ -291,7 +291,7 @@ const Auth = () => {
           });
         } else if (error.message?.includes("Failed to fetch") || error.message?.includes("network") || error.message?.includes("connection") || error.message?.includes("ERR_CONNECTION_RESET")) {
           const isNetlify = window.location.hostname.includes('netlify.app');
-          
+
           // Provide diagnostic help
           console.error("🔍 Connection Error - Run diagnostics:", {
             testConnection: "Run: window.__SUPABASE_DIAGNOSTIC__.testConnection()",
@@ -300,14 +300,14 @@ const Auth = () => {
             supabaseUrl: supabaseUrl,
             errorDetails: error,
           });
-          
+
           toast({
             title: "Connection Error",
             description: `Cannot connect to Supabase. Open browser console (F12) and run: window.__SUPABASE_DIAGNOSTIC__.testConnection() to diagnose. Check: 1) Project is active in Supabase Dashboard, 2) URL is correct, 3) Network/firewall not blocking.`,
             variant: "destructive",
             duration: 25000,
           });
-          
+
           if (isNetlify) {
             console.warn("Netlify deployment - Also check:", {
               siteUrl: cleanRedirectUrl,
@@ -406,20 +406,20 @@ const Auth = () => {
       // Check if Supabase is configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
+
       if (!supabaseUrl || !supabaseKey) {
         const isProduction = import.meta.env.PROD;
         const errorMsg = isProduction
           ? 'Environment variables missing in Netlify. Go to Netlify → Site Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
           : 'Environment variables missing. Check your .env.local file.';
-        
+
         toast({
           title: "Configuration Error",
           description: errorMsg,
           variant: "destructive",
           duration: 15000,
         });
-        
+
         throw new Error(errorMsg);
       }
 
@@ -480,29 +480,29 @@ const Auth = () => {
       // Check if Supabase is configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
+
       if (!supabaseUrl || !supabaseKey) {
         const isProduction = import.meta.env.PROD;
         const errorMsg = isProduction
           ? 'Environment variables missing in Netlify. Go to Netlify → Site Settings → Environment Variables and add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, then redeploy.'
           : 'Environment variables missing. Check your .env.local file.';
-        
+
         toast({
           title: "Configuration Error",
           description: errorMsg,
           variant: "destructive",
           duration: 15000,
         });
-        
+
         console.error('❌ Missing Supabase environment variables:', {
           hasUrl: !!supabaseUrl,
           hasKey: !!supabaseKey,
           isProduction,
-          fix: isProduction 
+          fix: isProduction
             ? 'Add env vars in Netlify Dashboard → Site Settings → Environment Variables → Redeploy'
             : 'Add to .env.local file',
         });
-        
+
         throw new Error(errorMsg);
       }
 
@@ -522,7 +522,7 @@ const Auth = () => {
 
       if (error) {
         console.error('Signin error:', error);
-        
+
         if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Invalid credentials",
@@ -531,7 +531,7 @@ const Auth = () => {
           });
         } else if (error.message.includes("Failed to fetch") || error.message.includes("network") || error.message.includes("connection") || error.message.includes("ERR_CONNECTION_RESET")) {
           const isNetlify = window.location.hostname.includes('netlify.app');
-          
+
           if (isNetlify) {
             toast({
               title: "Netlify Configuration Issue",
@@ -588,7 +588,7 @@ const Auth = () => {
         <CardHeader className="space-y-4">
           <div className="flex items-center justify-center gap-2">
             <TrendingUp className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">Stock Screener</h1>
+            <h1 className="text-2xl font-bold">StockLens</h1>
           </div>
           <CardTitle>Welcome</CardTitle>
           <CardDescription>
@@ -601,7 +601,7 @@ const Auth = () => {
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <Button
@@ -614,7 +614,7 @@ const Auth = () => {
                   <GoogleIcon />
                   {loading ? "Connecting..." : "Continue with Google"}
                 </Button>
-                
+
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t" />
@@ -653,7 +653,7 @@ const Auth = () => {
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <Button
@@ -666,7 +666,7 @@ const Auth = () => {
                   <GoogleIcon />
                   {loading ? "Connecting..." : "Start with Google"}
                 </Button>
-                
+
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t" />

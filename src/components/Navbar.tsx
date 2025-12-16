@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export const Navbar = () => {
   const location = useLocation();
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const { isPracticeMode, togglePracticeMode } = usePracticeMode();
   const { user, loading, signOut } = useAuth();
@@ -38,38 +38,70 @@ export const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Market status logic (simple version)
+  const isMarketOpen = () => {
+    const now = new Date();
+    // Convert to EST
+    const estTime = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+    const estDate = new Date(estTime);
+
+    const day = estDate.getDay(); // 0 is Sunday, 6 is Saturday
+    const hours = estDate.getHours();
+    const minutes = estDate.getMinutes();
+
+    // Check if weekend
+    if (day === 0 || day === 6) return false;
+
+    // Market hours roughly 9:30 AM - 4:00 PM EST
+    const timeInMinutes = hours * 60 + minutes;
+    const marketOpen = 9 * 60 + 30;
+    const marketClose = 16 * 60;
+
+    return timeInMinutes >= marketOpen && timeInMinutes < marketClose;
+  };
+
+  const marketOpen = isMarketOpen();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 shadow-sm">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to={user ? "/stocks" : "/"} className="flex items-center gap-2 hover-scale group">
-          <div className="p-1.5 rounded-lg bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-            <TrendingUp className="h-5 w-5 text-secondary" />
+        <div className="flex items-center gap-4">
+          <Link to={user ? "/stocks" : "/"} className="flex items-center gap-2 hover-scale group">
+            <div className="p-1.5 rounded-lg bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+              <TrendingUp className="h-5 w-5 text-secondary" />
+            </div>
+            <span className="text-xl font-heading font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              StockLens
+            </span>
+          </Link>
+
+          {/* Market Status Indicator - Desktop */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/40 border border-border/50 text-xs font-medium">
+            <div className={`h-2 w-2 rounded-full ${marketOpen ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+            <span className={marketOpen ? "text-success-foreground" : "text-muted-foreground"}>
+              {marketOpen ? "Market Open" : "Market Closed"}
+            </span>
           </div>
-          <span className="text-xl font-heading font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            StockLens
-          </span>
-        </Link>
+        </div>
 
         <div className="hidden md:flex items-center gap-1">
           {!user && (
             <Link
               to="/"
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                isActive("/") 
-                  ? "text-secondary bg-secondary/10" 
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/")
+                  ? "text-secondary bg-secondary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
+                }`}
             >
               Home
             </Link>
           )}
           <Link
             to="/stocks"
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive("/stocks") 
-                ? "text-secondary bg-secondary/10" 
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/stocks")
+                ? "text-secondary bg-secondary/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+              }`}
           >
             Stocks
           </Link>
@@ -82,42 +114,38 @@ export const Navbar = () => {
             Screener
           </Link> */}
           <Link
-           to="/comparison"
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive("/comparison") 
-                ? "text-secondary bg-secondary/10" 
+            to="/comparison"
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/comparison")
+                ? "text-secondary bg-secondary/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+              }`}
           >
             Compare
           </Link>
           <Link
             to="/analysis"
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive("/analysis") 
-                ? "text-secondary bg-secondary/10" 
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/analysis")
+                ? "text-secondary bg-secondary/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+              }`}
           >
             Analysis
           </Link>
           <Link
             to="/portfolio"
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive("/portfolio") 
-                ? "text-secondary bg-secondary/10" 
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/portfolio")
+                ? "text-secondary bg-secondary/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+              }`}
           >
             Portfolio
           </Link>
           <Link
             to="/profile"
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isActive("/profile") 
-                ? "text-secondary bg-secondary/10" 
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/profile")
+                ? "text-secondary bg-secondary/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+              }`}
           >
             Profile
           </Link>
@@ -128,11 +156,10 @@ export const Navbar = () => {
             variant={isPracticeMode ? "default" : "outline"}
             size="sm"
             onClick={togglePracticeMode}
-            className={`hidden md:inline-flex gap-2 transition-all ${
-              isPracticeMode 
-                ? "bg-accent hover:bg-accent/90 shadow-sm" 
+            className={`hidden md:inline-flex gap-2 transition-all ${isPracticeMode
+                ? "bg-accent hover:bg-accent/90 shadow-sm"
                 : "hover:bg-muted/50"
-            }`}
+              }`}
           >
             <FlaskConical className="h-4 w-4" />
             {isPracticeMode && <Badge variant="secondary" className="px-1.5 py-0 text-xs">Practice</Badge>}

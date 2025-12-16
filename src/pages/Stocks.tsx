@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
@@ -50,14 +52,14 @@ export default function Stocks() {
 
   // Fetch real stock data from Alpha Vantage (when not in practice mode)
   const { data: realStocks, lastUpdate: realLastUpdate, loading, refetch } = useStockData(!isPracticeMode);
-  
+
   // Use simulated updates in practice mode
   const { data: practiceStocks, lastUpdate: practiceLastUpdate } = useRealtimeUpdates(realStocks, isPracticeMode);
-  
+
   // Use appropriate data based on mode and search
   const baseStocks = isPracticeMode ? practiceStocks : realStocks;
   const lastUpdate = isPracticeMode ? practiceLastUpdate : realLastUpdate;
-  
+
   // Show searched stocks if search is active, otherwise show default stocks
   const stocks = searchQuery && searchedStocks.length > 0 ? searchedStocks : baseStocks;
 
@@ -79,38 +81,38 @@ export default function Stocks() {
   // Generate mini chart data based on stock price and change
   const generateMiniChartData = useCallback((stock: any) => {
     if (!stock || !stock.price) return [];
-    
+
     const currentPrice = stock.price;
     const changePercent = stock.changePercent || 0;
     const dataPoints = 20; // Number of points for mini chart
-    
+
     // Use stock ID as seed for consistent patterns
     const seed = stock.id ? stock.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) : Math.random() * 1000;
     const random = seededRandom(seed);
-    
+
     const data = [];
     // Calculate starting price based on current change
     const startPrice = currentPrice / (1 + changePercent / 100);
-    
+
     for (let i = 0; i < dataPoints; i++) {
       const progress = i / (dataPoints - 1);
-      
+
       // Create realistic price movement with some volatility
       const volatility = (random() - 0.5) * (currentPrice * 0.015);
       const trendPrice = startPrice + (currentPrice - startPrice) * progress;
       const price = Math.max(trendPrice + volatility, 0.01);
-      
+
       data.push({
         index: i,
         price: parseFloat(price.toFixed(2))
       });
     }
-    
+
     // Ensure last point is current price
     if (data.length > 0) {
       data[data.length - 1].price = currentPrice;
     }
-    
+
     return data;
   }, []);
 
@@ -127,7 +129,7 @@ export default function Stocks() {
     try {
       // Call Finnhub search API via edge function
       const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
-        body: { 
+        body: {
           search: query,
           limit: 20 // Limit results to avoid too many API calls
         }
@@ -245,11 +247,11 @@ export default function Stocks() {
                 Stock Selection
               </h1>
               <p className="text-muted-foreground text-lg">
-                {isPracticeMode 
-                  ? "Practice mode - Simulated data updates" 
+                {isPracticeMode
+                  ? "Practice mode - Simulated data updates"
                   : searchQuery && searchedStocks.length > 0
-                  ? `Showing search results for "${searchQuery}"`
-                  : "Live stock data - Search for any stock symbol or company name"}
+                    ? `Showing search results for "${searchQuery}"`
+                    : "Live stock data - Search for any stock symbol or company name"}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
@@ -311,11 +313,10 @@ export default function Stocks() {
                     <Badge
                       key={cat}
                       variant={activeCategory === cat ? "default" : "outline"}
-                      className={`cursor-pointer transition-all duration-200 ${
-                        activeCategory === cat
-                          ? "bg-secondary text-secondary-foreground border-secondary shadow-md scale-105"
-                          : "hover:bg-muted hover:border-secondary/50 hover:scale-105"
-                      }`}
+                      className={`cursor-pointer transition-all duration-200 ${activeCategory === cat
+                        ? "bg-secondary text-secondary-foreground border-secondary shadow-md scale-105"
+                        : "hover:bg-muted hover:border-secondary/50 hover:scale-105"
+                        }`}
                       onClick={() => setActiveCategory(cat)}
                     >
                       {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -412,7 +413,7 @@ export default function Stocks() {
                     <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-secondary animate-spin" />
                   )}
                 </div>
-                
+
                 {/* Search Results Dropdown */}
                 {showSearchResults && searchResults.length > 0 && (
                   <Card className="absolute top-full left-0 right-0 mt-2 z-50 max-h-96 overflow-y-auto border-2 shadow-xl bg-card/95 backdrop-blur-md">
@@ -444,7 +445,7 @@ export default function Stocks() {
                     </div>
                   </Card>
                 )}
-                
+
                 {showSearchResults && searchQuery && searchResults.length === 0 && !isSearching && (
                   <Card className="absolute top-full left-0 right-0 mt-2 z-50 p-6 border-2 shadow-xl bg-card/95 backdrop-blur-md">
                     <p className="text-sm text-muted-foreground text-center">
@@ -453,17 +454,16 @@ export default function Stocks() {
                   </Card>
                 )}
               </div>
-              
+
               <div className="flex gap-2">
                 <Button
                   variant={viewMode === "grid" ? "default" : "outline"}
                   size="icon"
                   onClick={() => setViewMode("grid")}
-                  className={`h-12 w-12 border-2 transition-all ${
-                    viewMode === "grid"
-                      ? "bg-secondary text-secondary-foreground border-secondary shadow-md"
-                      : "hover:border-secondary/50 hover:bg-muted/50"
-                  }`}
+                  className={`h-12 w-12 border-2 transition-all ${viewMode === "grid"
+                    ? "bg-secondary text-secondary-foreground border-secondary shadow-md"
+                    : "hover:border-secondary/50 hover:bg-muted/50"
+                    }`}
                 >
                   <LayoutGrid className="h-5 w-5" />
                 </Button>
@@ -471,11 +471,10 @@ export default function Stocks() {
                   variant={viewMode === "list" ? "default" : "outline"}
                   size="icon"
                   onClick={() => setViewMode("list")}
-                  className={`h-12 w-12 border-2 transition-all ${
-                    viewMode === "list"
-                      ? "bg-secondary text-secondary-foreground border-secondary shadow-md"
-                      : "hover:border-secondary/50 hover:bg-muted/50"
-                  }`}
+                  className={`h-12 w-12 border-2 transition-all ${viewMode === "list"
+                    ? "bg-secondary text-secondary-foreground border-secondary shadow-md"
+                    : "hover:border-secondary/50 hover:bg-muted/50"
+                    }`}
                 >
                   <List className="h-5 w-5" />
                 </Button>
@@ -484,12 +483,29 @@ export default function Stocks() {
 
             {/* Stock Grid/List */}
             {loading && stocks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="relative">
-                  <RefreshCw className="h-16 w-16 text-secondary animate-spin mb-6" />
-                  <div className="absolute inset-0 h-16 w-16 border-4 border-secondary/20 rounded-full animate-ping" />
-                </div>
-                <p className="text-muted-foreground text-lg font-medium">Loading stock data...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="rounded-xl border bg-card text-card-foreground shadow space-y-4 p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                      <Skeleton className="h-6 w-16 rounded-full" />
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <div className="space-y-2">
+                        <Skeleton className="h-10 w-28" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <Skeleton className="h-3 w-12 ml-auto" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                  </div>
+                ))}
               </div>
             ) : (
               <div
@@ -499,137 +515,134 @@ export default function Stocks() {
                     : "space-y-4"
                 }
               >
-                 {filteredStocks.map((stock, index) => {
+                {filteredStocks.map((stock, index) => {
                   const isPositive = stock.change >= 0;
                   return (
-                <Card
-                  key={stock.id}
-                  className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${
-                    selectedStocks.includes(stock.id)
-                      ? "border-2 border-secondary bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-xl scale-[1.02]"
-                      : "border-2 hover:border-secondary/50 hover:shadow-xl hover:scale-[1.02] bg-card/50 backdrop-blur-sm"
-                  } animate-fade-in`}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                  onClick={() => navigate(`/analysis?symbol=${stock.symbol}`)}
-                >
-                  {/* Gradient overlay */}
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                    isPositive 
-                      ? "bg-gradient-to-br from-success/5 to-transparent" 
-                      : "bg-gradient-to-br from-destructive/5 to-transparent"
-                  }`} />
-                  
-                  <div className="relative p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-2xl mb-1 group-hover:text-secondary transition-colors">
-                          {stock.symbol}
-                        </h3>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {stock.name}
-                        </p>
-                      </div>
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs border-2 ml-2 shrink-0 bg-background/50 backdrop-blur-sm"
-                      >
-                        {stock.category}
-                      </Badge>
-                    </div>
+                    <SpotlightCard
+                      key={stock.id}
+                      className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${selectedStocks.includes(stock.id)
+                        ? "border-2 border-secondary bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-xl scale-[1.02]"
+                        : "border-2 hover:border-secondary/50 hover:shadow-xl hover:scale-[1.02] bg-card/60 backdrop-blur-md"
+                        } animate-fade-in`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                      onClick={() => navigate(`/analysis?symbol=${stock.symbol}`)}
+                      spotlightColor="rgba(var(--secondary), 0.15)"
+                    >
+                      {/* Gradient overlay */}
+                      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isPositive
+                        ? "bg-gradient-to-br from-success/5 to-transparent"
+                        : "bg-gradient-to-br from-destructive/5 to-transparent"
+                        }`} />
 
-                    <div className="flex items-end justify-between mb-4">
-                      <div>
-                        <p className="text-3xl font-bold mb-1">${stock.price?.toFixed(2)}</p>
-                        <div
-                          className={`flex items-center gap-1.5 text-sm font-semibold ${
-                            isPositive
-                              ? "text-success"
-                              : "text-destructive"
-                          }`}
-                        >
-                          {isPositive ? (
-                            <TrendingUp className="h-5 w-5" />
-                          ) : (
-                            <TrendingDown className="h-5 w-5" />
-                          )}
-                          <span>
-                            {isPositive ? "+" : ""}
-                            {stock.change?.toFixed(2)} ({stock.changePercent?.toFixed(2)}%)
-                          </span>
+                      <div className="relative p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-2xl mb-1 group-hover:text-secondary transition-colors">
+                              {stock.symbol}
+                            </h3>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {stock.name}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-2 ml-2 shrink-0 bg-background/50 backdrop-blur-sm"
+                          >
+                            {stock.category}
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-end justify-between mb-4">
+                          <div>
+                            <p className="text-3xl font-bold mb-1">${stock.price?.toFixed(2)}</p>
+                            <div
+                              className={`flex items-center gap-1.5 text-sm font-semibold ${isPositive
+                                ? "text-success"
+                                : "text-destructive"
+                                }`}
+                            >
+                              {isPositive ? (
+                                <TrendingUp className="h-5 w-5" />
+                              ) : (
+                                <TrendingDown className="h-5 w-5" />
+                              )}
+                              <span>
+                                {isPositive ? "+" : ""}
+                                {stock.change?.toFixed(2)} ({stock.changePercent?.toFixed(2)}%)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground font-medium mb-1">Volume</p>
+                            <p className="text-sm font-semibold">
+                              {stock.volume?.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Enhanced Mini Chart */}
+                        <div className={`mt-4 h-24 rounded-lg overflow-hidden ${isPositive
+                          ? "bg-success/5 border border-success/20"
+                          : "bg-destructive/5 border border-destructive/20"
+                          }`}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart
+                              data={generateMiniChartData(stock)}
+                              margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
+                            >
+                              <defs>
+                                <linearGradient
+                                  id={`gradient-${stock.id?.replace(/[^a-zA-Z0-9]/g, '-') || 'default'}`}
+                                  x1="0"
+                                  y1="0"
+                                  x2="0"
+                                  y2="1"
+                                >
+                                  <stop
+                                    offset="0%"
+                                    stopColor={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+                                    stopOpacity={0.4}
+                                  />
+                                  <stop
+                                    offset="100%"
+                                    stopColor={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+                                    stopOpacity={0.05}
+                                  />
+                                </linearGradient>
+                              </defs>
+                              <YAxis
+                                hide
+                                domain={['dataMin - dataMin * 0.02', 'dataMax + dataMax * 0.02']}
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="price"
+                                stroke={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+                                strokeWidth={2.5}
+                                fill={`url(#gradient-${stock.id?.replace(/[^a-zA-Z0-9]/g, '-') || 'default'})`}
+                                dot={false}
+                                activeDot={{
+                                  r: 3,
+                                  fill: isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))",
+                                  strokeWidth: 2,
+                                  stroke: isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"
+                                }}
+                                isAnimationActive={true}
+                                animationDuration={300}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
                         </div>
                       </div>
 
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground font-medium mb-1">Volume</p>
-                        <p className="text-sm font-semibold">
-                          {stock.volume?.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Enhanced Mini Chart */}
-                    <div className={`mt-4 h-24 rounded-lg overflow-hidden ${
-                      isPositive 
-                        ? "bg-success/5 border border-success/20" 
-                        : "bg-destructive/5 border border-destructive/20"
-                    }`}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart 
-                          data={generateMiniChartData(stock)}
-                          margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
-                        >
-                          <defs>
-                            <linearGradient 
-                              id={`gradient-${stock.id?.replace(/[^a-zA-Z0-9]/g, '-') || 'default'}`} 
-                              x1="0" 
-                              y1="0" 
-                              x2="0" 
-                              y2="1"
-                            >
-                              <stop 
-                                offset="0%" 
-                                stopColor={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"} 
-                                stopOpacity={0.4}
-                              />
-                              <stop 
-                                offset="100%" 
-                                stopColor={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"} 
-                                stopOpacity={0.05}
-                              />
-                            </linearGradient>
-                          </defs>
-                          <YAxis 
-                            hide 
-                            domain={['dataMin - dataMin * 0.02', 'dataMax + dataMax * 0.02']} 
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="price"
-                            stroke={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"}
-                            strokeWidth={2.5}
-                            fill={`url(#gradient-${stock.id?.replace(/[^a-zA-Z0-9]/g, '-') || 'default'})`}
-                            dot={false}
-                            activeDot={{ 
-                              r: 3, 
-                              fill: isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))",
-                              strokeWidth: 2,
-                              stroke: isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"
-                            }}
-                            isAnimationActive={true}
-                            animationDuration={300}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  
-                  {/* Hover effect border */}
-                  <div className={`absolute inset-0 border-2 rounded-lg pointer-events-none transition-opacity duration-300 ${
-                    isPositive ? "border-success/20" : "border-destructive/20"
-                  } opacity-0 group-hover:opacity-100`} />
-                </Card>
-              )})}
-            </div>
+                      {/* Hover effect border */}
+                      <div className={`absolute inset-0 border-2 rounded-lg pointer-events-none transition-opacity duration-300 ${isPositive ? "border-success/20" : "border-destructive/20"
+                        } opacity-0 group-hover:opacity-100`} />
+                    </SpotlightCard>
+                  )
+                })}
+              </div>
             )}
           </main>
         </div>
