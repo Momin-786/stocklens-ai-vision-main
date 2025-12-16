@@ -122,8 +122,8 @@ export default function Landing() {
       {/* Top Navigation Bar */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-            ? "bg-background/95 backdrop-blur-md border-b border-border/40 shadow-lg"
-            : "bg-transparent"
+          ? "bg-background/95 backdrop-blur-md border-b border-border/40 shadow-lg"
+          : "bg-transparent"
           }`}
       >
         <nav className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
@@ -559,9 +559,13 @@ export default function Landing() {
                 </div>
                 <span className="text-xl font-heading font-bold">StockLens</span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-4">
                 AI-powered stock analysis for smarter investing.
               </p>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p><span className="font-medium text-foreground">Email:</span> momina7863@gmail.com</p>
+                <p><span className="font-medium text-foreground">Location:</span> Gujranwala</p>
+              </div>
             </div>
 
             <div>

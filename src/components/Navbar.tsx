@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
 
 export const Navbar = () => {
   const location = useLocation();
@@ -164,15 +165,18 @@ export const Navbar = () => {
             )}
           </Button>
           {user ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={signOut}
-              className="gap-2 hover:bg-muted/50 border-2"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
+            <>
+              <FeedbackDialog />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="gap-2 hover:bg-muted/50 border-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            </>
           ) : (
             <>
               <Button

@@ -600,141 +600,193 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4">
-          <div className="flex items-center justify-center gap-2">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">StockLens</h1>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
+      {/* Dynamic Background Effects */}
+      <div className="absolute inset-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background pointer-events-none" />
+      <div className="absolute -top-20 -left-20 w-72 h-72 bg-secondary/30 rounded-full blur-[100px] animate-pulse" />
+      <div className="absolute top-40 right-10 w-96 h-96 bg-primary/20 rounded-full blur-[120px] animate-pulse delay-1000" />
+
+      {/* Theme Toggle */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 z-50 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors"
+      >
+        {theme === "light" ? (
+          <Moon className="h-5 w-5" />
+        ) : (
+          <Sun className="h-5 w-5" />
+        )}
+      </Button>
+
+      <Card className="w-full max-w-lg relative z-10 border-border/50 bg-card/60 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+        <CardHeader className="space-y-6 text-center pb-8">
+          <div className="flex flex-col items-center justify-center gap-3">
+            <div className="p-3 rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+              <TrendingUp className="h-10 w-10 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-heading font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+                StockLens
+              </h1>
+              <p className="text-sm text-muted-foreground font-medium">
+                AI-Powered Market Intelligence
+              </p>
+            </div>
           </div>
-          <CardTitle>Welcome</CardTitle>
-          <CardDescription>
-            Sign in to access real-time stock data and analysis
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/50 rounded-xl mb-6">
+              <TabsTrigger
+                value="signin"
+                className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300"
+              >
+                Sign In
+              </TabsTrigger>
+              <TabsTrigger
+                value="signup"
+                className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-300"
+              >
+                Sign Up
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
+            <TabsContent value="signin" className="group">
+              <form onSubmit={handleSignIn} className="space-y-5 animate-in slide-in-from-left-2 duration-300">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-11 hover:bg-accent hover:text-accent-foreground hover:border-primary transition-all duration-300"
                   onClick={handleGoogleSignIn}
                   disabled={loading}
                 >
                   <GoogleIcon />
-                  {loading ? "Connecting..." : "Continue with Google"}
+                  <span className="ml-2">Continue with Google</span>
                 </Button>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
+                    <span className="w-full border-t border-border/50" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                    <span className="bg-background/95 backdrop-blur px-2 text-muted-foreground">
                       Or continue with email
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-email">Email</Label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="h-11 bg-background/50 hover:bg-background focus:bg-background border-muted hover:border-primary focus:border-primary transition-all duration-300"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <a href="#" className="text-xs text-primary hover:text-primary/80">Forgot password?</a>
+                    </div>
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-11 bg-background/50 hover:bg-background focus:bg-background border-muted hover:border-primary focus:border-primary transition-all duration-300"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+
+                <Button type="submit" className="w-full h-11 text-base font-medium shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-5 animate-in slide-in-from-right-2 duration-300">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-11 hover:bg-accent hover:text-accent-foreground hover:border-primary transition-all duration-300"
                   onClick={handleGoogleSignIn}
                   disabled={loading}
                 >
                   <GoogleIcon />
-                  {loading ? "Connecting..." : "Start with Google"}
+                  <span className="ml-2">Start with Google</span>
                 </Button>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
+                    <span className="w-full border-t border-border/50" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                    <span className="bg-background/95 backdrop-blur px-2 text-muted-foreground">
                       Or continue with email
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="h-11 bg-background/50 hover:bg-background focus:bg-background border-muted hover:border-primary focus:border-primary transition-all duration-300"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="h-11 bg-muted/30 focus:bg-background transition-colors"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-11 bg-muted/30 focus:bg-background transition-colors"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : "Sign Up"}
+
+                <Button type="submit" className="w-full h-11 text-base font-medium shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" disabled={loading}>
+                  {loading ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      <div className="absolute bottom-4 text-xs text-muted-foreground/60">
+        &copy; 2024 StockLens AI. Secure Authentication.
+      </div>
     </div>
   );
 };
