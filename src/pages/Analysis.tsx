@@ -64,7 +64,7 @@ export default function Analysis() {
   const [loadingChart, setLoadingChart] = useState(false);
   const [customStockData, setCustomStockData] = useState<any>(null);
   const [loadingCustomStock, setLoadingCustomStock] = useState(false);
-  
+
   // Update selectedSymbol when URL param changes
   useEffect(() => {
     const urlSymbol = searchParams.get("symbol");
@@ -75,7 +75,7 @@ export default function Analysis() {
       setAiInsights(null);
     }
   }, [searchParams, selectedSymbol]);
-  
+
   // Find stock in default list or use custom stock data
   const defaultStock = stocks.find(s => s.symbol === selectedSymbol);
   const stock = defaultStock || customStockData;
@@ -83,10 +83,10 @@ export default function Analysis() {
   // Generate mock chart data based on current price and change
   const generateMockChartData = () => {
     if (!stock) return [];
-    
+
     const currentPrice = stock.price;
     const changePercent = stock.changePercent || 0;
-    
+
     // Determine number of data points based on time range
     const dataPoints = {
       '1D': 24,
@@ -95,21 +95,21 @@ export default function Analysis() {
       '6M': 26,
       '1Y': 52
     }[timeRange] || 30;
-    
+
     const data = [];
     const now = new Date();
-    
+
     // Calculate starting price based on current change
     const startPrice = currentPrice / (1 + changePercent / 100);
-    
+
     for (let i = 0; i < dataPoints; i++) {
       const progress = i / (dataPoints - 1);
-      
+
       // Create realistic price movement with some volatility
       const volatility = (Math.random() - 0.5) * (currentPrice * 0.02);
       const trendPrice = startPrice + (currentPrice - startPrice) * progress;
       const price = Math.max(trendPrice + volatility, 0.01);
-      
+
       // Calculate date based on time range
       let date = new Date(now);
       if (timeRange === '1D') {
@@ -123,28 +123,28 @@ export default function Analysis() {
       } else if (timeRange === '1Y') {
         date.setDate(date.getDate() - (dataPoints - i) * 7);
       }
-      
+
       data.push({
         date: date.toISOString(),
         price: parseFloat(price.toFixed(2)),
         volume: Math.floor(Math.random() * 10000000) + 5000000
       });
     }
-    
+
     // Ensure last point is current price
     data[data.length - 1].price = currentPrice;
-    
+
     return data;
   };
 
   // Fetch AI prediction function
   const fetchAIPrediction = async () => {
     if (!stock) return;
-    
+
     setLoadingPrediction(true);
     try {
       console.log('Fetching AI prediction for', stock.symbol);
-      
+
       const { data, error } = await supabase.functions.invoke('stock-ai-prediction', {
         body: {
           symbol: stock.symbol,
@@ -160,7 +160,7 @@ export default function Analysis() {
         console.error('AI prediction error:', error);
         throw error;
       }
-      
+
       if (data) {
         console.log('AI prediction received:', data);
         setAiInsights({
@@ -216,9 +216,9 @@ export default function Analysis() {
         const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
           body: { symbols: [selectedSymbol] }
         });
-        
+
         if (error) throw error;
-        
+
         if (data?.stocks?.[0]) {
           const stockInfo = data.stocks[0];
           setCustomStockData({
@@ -252,7 +252,7 @@ export default function Analysis() {
     navigate(`/analysis?symbol=${newSymbol}`);
     setCustomStockData(null);
     setAiInsights(null);
-    
+
     // If stock is not in the default list, fetch its data
     if (!stocks.find(s => s.symbol === newSymbol)) {
       setLoadingCustomStock(true);
@@ -260,9 +260,9 @@ export default function Analysis() {
         const { data, error } = await supabase.functions.invoke('fetch-stock-data', {
           body: { symbols: [newSymbol] }
         });
-        
+
         if (error) throw error;
-        
+
         if (data?.stocks?.[0]) {
           const stockInfo = data.stocks[0];
           setCustomStockData({
@@ -294,7 +294,7 @@ export default function Analysis() {
       const mockData = generateMockChartData();
       setChartData(mockData);
       setLoadingChart(false);
-      
+
       // Fetch AI prediction after chart data is ready
       if (!aiInsights || aiInsights.symbol !== stock.symbol) {
         fetchAIPrediction();
@@ -326,11 +326,11 @@ export default function Analysis() {
         <div className="text-center space-y-4">
           <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
           <p className="text-muted-foreground">
-            {loadingCustomStock 
-              ? `Loading data for ${selectedSymbol}...` 
-              : loading 
-              ? "Loading stock data..." 
-              : "Generating AI prediction..."}
+            {loadingCustomStock
+              ? `Loading data for ${selectedSymbol}...`
+              : loading
+                ? "Loading stock data..."
+                : "Generating AI prediction..."}
           </p>
           {loadingPrediction && (
             <p className="text-sm text-muted-foreground">
@@ -386,7 +386,7 @@ export default function Analysis() {
               <StockSelector value={selectedSymbol} onValueChange={handleStockChange} />
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
@@ -443,9 +443,8 @@ export default function Analysis() {
                   </p>
                   <p className="text-4xl font-bold">${stock.price}</p>
                   <div
-                    className={`flex items-center gap-1 mt-1 ${
-                      stock.change >= 0 ? "text-success" : "text-destructive"
-                    }`}
+                    className={`flex items-center gap-1 mt-1 ${stock.change >= 0 ? "text-success" : "text-destructive"
+                      }`}
                   >
                     {stock.change >= 0 ? (
                       <TrendingUp className="h-4 w-4" />
@@ -483,19 +482,19 @@ export default function Analysis() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="date" 
+                      <XAxis
+                        dataKey="date"
                         tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         stroke="hsl(var(--muted-foreground))"
                         fontSize={12}
                       />
-                      <YAxis 
+                      <YAxis
                         domain={['dataMin - 5', 'dataMax + 5']}
                         stroke="hsl(var(--muted-foreground))"
                         fontSize={12}
                         tickFormatter={(value) => `$${value}`}
                       />
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
@@ -505,10 +504,10 @@ export default function Analysis() {
                         formatter={(value: any) => [`$${value}`, 'Price']}
                         labelFormatter={(date) => new Date(date).toLocaleString()}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="price" 
-                        stroke="hsl(var(--secondary))" 
+                      <Line
+                        type="monotone"
+                        dataKey="price"
+                        stroke="hsl(var(--secondary))"
                         strokeWidth={2}
                         dot={false}
                         activeDot={{ r: 6 }}
@@ -590,10 +589,16 @@ export default function Analysis() {
           {/* AI Prediction Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* AI Prediction Card */}
-            <Card className={`p-6 animate-scale-in border-2 ${aiInsights?.signal === "BUY" ? "border-success" : aiInsights?.signal === "SELL" ? "border-destructive" : "border-muted"}`}>
+            <Card className={`p-6 animate-scale-in border-2 ${aiInsights?.signal === "BUY" ? "border-success" :
+                aiInsights?.signal === "SELL" ? "border-destructive" :
+                  "border-secondary" // HOLD or others
+              }`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Target className={`h-5 w-5 ${aiInsights?.signal === "BUY" ? "text-success" : "text-destructive"}`} />
+                  <Target className={`h-5 w-5 ${aiInsights?.signal === "BUY" ? "text-success" :
+                      aiInsights?.signal === "SELL" ? "text-destructive" :
+                        "text-secondary"
+                    }`} />
                   <h2 className="text-lg font-semibold">AI Prediction</h2>
                 </div>
                 <Button
@@ -616,35 +621,58 @@ export default function Analysis() {
                 </div>
               ) : (
                 <>
-                  <div className="text-center mb-6">
-                    <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full ${aiInsights?.signal === "BUY" ? "bg-success/20 border-success" : "bg-destructive/20 border-destructive"} border-4 mb-3`}>
+                  <div className="text-center mb-6 relative">
+                    {/* Signal Circle */}
+                    <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-4 mb-3 ${aiInsights?.signal === "BUY" ? "bg-success/20 border-success" :
+                        aiInsights?.signal === "SELL" ? "bg-destructive/20 border-destructive" :
+                          "bg-secondary/20 border-secondary"
+                      }`}>
                       {aiInsights?.signal === "BUY" ? (
                         <TrendingUp className="h-10 w-10 text-success" />
-                      ) : (
+                      ) : aiInsights?.signal === "SELL" ? (
                         <TrendingDown className="h-10 w-10 text-destructive" />
+                      ) : (
+                        <Activity className="h-10 w-10 text-secondary" />
                       )}
                     </div>
-                    <h3 className={`text-3xl font-bold mb-2 ${aiInsights?.signal === "BUY" ? "text-success" : "text-destructive"}`}>
-                      {aiInsights?.signal || "LOADING"}
+
+                    <h3 className={`text-3xl font-bold mb-2 ${aiInsights?.signal === "BUY" ? "text-success" :
+                        aiInsights?.signal === "SELL" ? "text-destructive" :
+                          "text-secondary"
+                      }`}>
+                      {aiInsights?.signal || "NEUTRAL"}
                     </h3>
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+
+                    {/* Enhanced Confidence Score */}
+                    <div className="mt-4 flex flex-col items-center">
+                      <div className="relative w-full h-4 bg-muted/50 rounded-full overflow-hidden">
                         <div
-                          className={`h-full ${aiInsights?.signal === "BUY" ? "bg-success" : "bg-destructive"}`}
+                          className={`absolute left-0 top-0 h-full transition-all duration-1000 ease-out rounded-full ${aiInsights?.signal === "BUY" ? "bg-gradient-to-r from-success/50 to-success" :
+                              aiInsights?.signal === "SELL" ? "bg-gradient-to-r from-destructive/50 to-destructive" :
+                                "bg-gradient-to-r from-secondary/50 to-secondary"
+                            }`}
                           style={{ width: `${aiInsights?.confidence || 0}%` }}
                         />
+                        {/* Tick marks for scale */}
+                        <div className="absolute inset-0 flex justify-between px-1">
+                          {[0, 25, 50, 75, 100].map(tick => (
+                            <div key={tick} className="h-full w-px bg-background/30" style={{ left: `${tick}%` }} />
+                          ))}
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold">
-                        {Math.round(aiInsights?.confidence || 0)}%
-                      </span>
+                      <div className="flex justify-between w-full mt-1 text-xs text-muted-foreground font-medium">
+                        <span>Low Confidence</span>
+                        <span className={`${aiInsights?.confidence > 80 ? "font-bold text-foreground" : ""
+                          }`}>
+                          {Math.round(aiInsights?.confidence || 0)}% Score
+                        </span>
+                        <span>High Confidence</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Confidence Score
-                    </p>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="p-4 bg-muted/30 rounded-lg">
+                    <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
                       <p className="text-sm leading-relaxed">
                         {aiInsights?.reasoning || "Loading analysis..."}
                       </p>
@@ -657,9 +685,12 @@ export default function Analysis() {
                       </p>
                       <ul className="space-y-2">
                         {(aiInsights?.keyFactors || []).map((factor: string, i: number) => (
-                          <li key={i} className="text-xs flex gap-2">
-                            <span className={aiInsights?.signal === "BUY" ? "text-success" : "text-destructive"}>
-                              {aiInsights?.signal === "BUY" ? "✓" : "⚠"}
+                          <li key={i} className="text-xs flex gap-2 items-start">
+                            <span className={`mt-0.5 ${aiInsights?.signal === "BUY" ? "text-success" :
+                                aiInsights?.signal === "SELL" ? "text-destructive" :
+                                  "text-secondary"
+                              }`}>
+                              ●
                             </span>
                             <span className="text-muted-foreground">{factor}</span>
                           </li>
