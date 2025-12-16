@@ -3,7 +3,6 @@ import { Moon, Sun, TrendingUp, FlaskConical, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { usePracticeMode } from "@/contexts/PracticeModeContext";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -11,7 +10,6 @@ export const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const { isPracticeMode, togglePracticeMode } = usePracticeMode();
   const { user, loading, signOut } = useAuth();
 
   useEffect(() => {
@@ -89,8 +87,8 @@ export const Navbar = () => {
             <Link
               to="/"
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/")
-                  ? "text-secondary bg-secondary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                ? "text-secondary bg-secondary/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
             >
               Home
@@ -99,8 +97,8 @@ export const Navbar = () => {
           <Link
             to="/stocks"
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/stocks")
-                ? "text-secondary bg-secondary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              ? "text-secondary bg-secondary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
           >
             Stocks
@@ -116,8 +114,8 @@ export const Navbar = () => {
           <Link
             to="/comparison"
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/comparison")
-                ? "text-secondary bg-secondary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              ? "text-secondary bg-secondary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
           >
             Compare
@@ -125,8 +123,8 @@ export const Navbar = () => {
           <Link
             to="/analysis"
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/analysis")
-                ? "text-secondary bg-secondary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              ? "text-secondary bg-secondary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
           >
             Analysis
@@ -134,8 +132,8 @@ export const Navbar = () => {
           <Link
             to="/portfolio"
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/portfolio")
-                ? "text-secondary bg-secondary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              ? "text-secondary bg-secondary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
           >
             Portfolio
@@ -143,8 +141,8 @@ export const Navbar = () => {
           <Link
             to="/profile"
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${isActive("/profile")
-                ? "text-secondary bg-secondary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              ? "text-secondary bg-secondary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
           >
             Profile
@@ -152,18 +150,6 @@ export const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant={isPracticeMode ? "default" : "outline"}
-            size="sm"
-            onClick={togglePracticeMode}
-            className={`hidden md:inline-flex gap-2 transition-all ${isPracticeMode
-                ? "bg-accent hover:bg-accent/90 shadow-sm"
-                : "hover:bg-muted/50"
-              }`}
-          >
-            <FlaskConical className="h-4 w-4" />
-            {isPracticeMode && <Badge variant="secondary" className="px-1.5 py-0 text-xs">Practice</Badge>}
-          </Button>
           <Button
             variant="ghost"
             size="icon"

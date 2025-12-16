@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
+import { CommandMenu } from "@/components/CommandMenu";
 import { AIChat } from "@/components/AIChat";
 import { Onboarding } from "@/components/Onboarding";
 import { PracticeModeProvider } from "@/contexts/PracticeModeContext";
@@ -72,6 +73,7 @@ const AppRoutes = () => {
 
   return (
     <>
+      <CommandMenu />
       {showNavbar && <Navbar />}
       <Routes>
         <Route

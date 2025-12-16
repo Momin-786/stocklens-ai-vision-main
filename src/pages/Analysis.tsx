@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -32,6 +33,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Info } from "lucide-react";
 
 // Helper function to get stock name
@@ -63,7 +72,6 @@ export default function Analysis() {
   const symbolParam = searchParams.get("symbol") || "AAPL";
   const [selectedSymbol, setSelectedSymbol] = useState(symbolParam);
   const [timeRange, setTimeRange] = useState("1M");
-  const { isPracticeMode } = usePracticeMode();
   const { data: stocks, loading } = useStockData();
   const [aiInsights, setAiInsights] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
@@ -367,10 +375,18 @@ export default function Analysis() {
   // Show loading if AI insights are not ready yet
   if (!aiInsights && !loadingPrediction) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-muted-foreground">Generating AI prediction...</p>
+      <div className="min-h-screen bg-background container mx-auto px-4 py-8 space-y-8">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-1/3" />
+          <Skeleton className="h-4 w-1/4" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-[300px] w-full rounded-xl" />
+          </div>
         </div>
       </div>
     );
@@ -381,6 +397,25 @@ export default function Analysis() {
       <RiskDisclaimer pageName="analysis" />
       <AIChat />
       <div className="container mx-auto px-4 py-8">
+        {/* Breadcrumbs */}
+        <div className="mb-6">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/">Home</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/stocks">Stocks</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Analysis</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
         {/* Header */}
         <div className="flex flex-col gap-4 mb-8 animate-fade-in">
           <div className="flex items-center gap-4">
@@ -420,11 +455,6 @@ export default function Analysis() {
             </div>
 
             <div className="flex gap-2">
-              {isPracticeMode && (
-                <Badge variant="outline" className="bg-accent/10 text-accent border-accent">
-                  Practice Mode
-                </Badge>
-              )}
               <Button variant="outline" size="sm" onClick={handleDownloadReport}>
                 <Download className="h-4 w-4 mr-2" />
                 Download Report
@@ -481,8 +511,8 @@ export default function Analysis() {
 
               {/* Chart */}
               {loadingChart ? (
-                <div className="h-80 bg-muted/30 rounded-lg flex items-center justify-center">
-                  <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+                <div className="h-80">
+                  <Skeleton className="h-full w-full rounded-lg" />
                 </div>
               ) : (
                 <div className="h-80">
@@ -664,8 +694,18 @@ export default function Analysis() {
               </p>
 
               {loadingPrediction ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+                <div className="space-y-6 py-6">
+                  <div className="flex justify-center">
+                    <Skeleton className="h-24 w-24 rounded-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-3/4 mx-auto" />
+                    <Skeleton className="h-4 w-1/2 mx-auto" />
+                  </div>
+                  <div className="space-y-4 pt-4">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                  </div>
                 </div>
               ) : (
                 <>
